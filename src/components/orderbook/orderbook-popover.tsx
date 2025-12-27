@@ -1,0 +1,43 @@
+import { Ellipsis } from 'lucide-react';
+
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
+import type { IPopoverFields, popoverFieldsInitialState } from './orderbook';
+
+interface IOrderbookPopoverProps {
+  onCheckedChange: (value: boolean, field: keyof typeof popoverFieldsInitialState) => void;
+  popoverFields: IPopoverFields;
+}
+
+export default function OrderbookPopover(props: IOrderbookPopoverProps) {
+  const { onCheckedChange, popoverFields } = props;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button className="bg-transparent hover:bg-transparent text-foreground/30 hover:text-foreground/80 cursor-pointer">
+          <Ellipsis className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60">
+        <div className="flex flex-col gap-6">
+          <span className="text-foreground text-xs">Order Book Display Options</span>
+          <div>
+            <div className="flex items-center justify-start gap-3">
+              <Checkbox
+                id="rounding"
+                name="rounding"
+                defaultChecked
+                checked={popoverFields.rounding}
+                onCheckedChange={(value: boolean) => onCheckedChange(value, 'rounding')}
+              />
+              <Label htmlFor="rounding">Rounding</Label>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
