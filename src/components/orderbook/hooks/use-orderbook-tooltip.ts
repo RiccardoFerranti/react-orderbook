@@ -1,0 +1,164 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import type { TOrderType } from '../types';
+import { EOrderTypes } from '../types';
+
+/**
+ * Custom hook for managing tooltip state and refs in the order book.
+ *
+ * Exposes:
+ * - isTooltipOpen: Boolean state, whether the tooltip is currently open.
+ * - hoverTooltipContent: Object containing the hovered row's price and orderType, or null if none.
+ * - hoverRect: DOMRect giving the position of the hovered row, or null if none.
+ * - containerRef: Ref to the order book container (div).
+ * - rowBidRefs: Ref (Map<number,HTMLDivElement>) of bid row DOM nodes, keyed by price.
+ * - rowAskRefs: Ref (Map<number,HTMLDivElement>) of ask row DOM nodes, keyed by price.
+ * - rowBuyHovered: Ref (number | null), the price of the currently hovered buy row.
+ * - rowSellHovered: Ref (number | null), the price of the currently hovered sell row.
+ * - handleHover: Function called when a user hovers a row; updates position and tooltip content.
+ * - handleLeave: Function called when a user leaves a row; schedules hiding of the tooltip.
+ * - handleTooltipEnter: Function called when mouse enters the tooltip; prevents premature close.
+ * - handleTooltipLeave: Function called when mouse leaves the tooltip; allows close timer.
+ *
+ * Designed for integration with OrderBook UI and tooltips showing cumulative and per-row data.
+ *
+ * @returns {{
+ *   isTooltipOpen: boolean,
+ *   hoverTooltipContent: { price: number, orderType: TOrderType } | null,
+ *   hoverRect: DOMRect | null,
+ *   containerRef: React.RefObject<HTMLDivElement>,
+ *   rowBidRefs: React.RefObject<Map<number, HTMLDivElement>>,
+ *   rowAskRefs: React.RefObject<Map<number, HTMLDivElement>>,
+ *   rowBuyHovered: React.MutableRefObject<number | null>,
+ *   rowSellHovered: React.MutableRefObject<number | null>,
+ *   handleHover: (price: number, orderType: TOrderType) => void,
+ *   handleLeave: () => void,
+ *   handleTooltipEnter: () => void,
+ *   handleTooltipLeave: () => void
+ * }}
+ */
+
+const useOrderBookTooltip = () => {
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const [hoverTooltipContent, setHoverTooltipContent] = useState<{
+    price: number;
+    orderType: TOrderType;
+  } | null>(null);
+  const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // It maps the reference of every row, it's used Map in order to have quicker access to the rows and improve performance
+  const rowBidRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const rowAskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const rafRef = useRef<number | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // It tracks when tooltip is hovered
+  const isHoveringTooltipRef = useRef(false);
+  // It tracks when row is hovered
+  const isHoveringRowRef = useRef(false);
+  // It tracks when buy or sell row are hovered
+  const rowBuyHovered = useRef<number | null>(null);
+  const rowSellHovered = useRef<number | null>(null);
+
+  const handleHover = useCallback((price: number, orderType: TOrderType) => {
+    // It cancels pending close
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    // It sets that we currently hovering a row
+    isHoveringRowRef.current = true;
+
+    if (orderType === EOrderTypes.bid) {
+      rowBuyHovered.current = price;
+    } else {
+      rowSellHovered.current = price;
+    }
+
+    // It deletes the previous animation when a new row is hovered
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    // It stores the animation reference
+    rafRef.current = requestAnimationFrame(() => {
+      // It gets from the rows map the current row hovered
+      const node = orderType === EOrderTypes.bid ? rowBidRefs.current.get(price) : rowAskRefs.current.get(price);
+      if (!node || !containerRef.current) return;
+
+      const nodeRect = node.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const relativeNodeRect = new DOMRect(
+        nodeRect.left - containerRect.left,
+        nodeRect.top - containerRect.top,
+        nodeRect.width,
+        nodeRect.height,
+      );
+      // It sets the row position relative to its wrapper
+      setHoverRect(relativeNodeRect);
+
+      setHoverTooltipContent({ price, orderType });
+
+      setIsTooltipOpen(true);
+    });
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    isHoveringRowRef.current = false;
+    rowBuyHovered.current = null;
+    rowSellHovered.current = null;
+
+    // The delay is used to avoid to clsoe the tooltip when we pass from one row to another one
+    closeTimeoutRef.current = setTimeout(() => {
+      if (!isHoveringRowRef.current && !isHoveringTooltipRef.current) {
+        setIsTooltipOpen(false);
+        setHoverTooltipContent(null);
+        setHoverRect(null);
+      }
+    }, 80); // 50–120ms is a good compromise
+  }, []);
+
+  const handleTooltipEnter = useCallback(() => {
+    isHoveringTooltipRef.current = true;
+
+    // Since the hover is moved on the tooltip, we can cancel the timeout applied to the row
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleTooltipLeave = useCallback(() => {
+    isHoveringTooltipRef.current = false;
+
+    // When we leave the tooltip if the hover is not on the row, we can close the tooltip and reset all
+    if (!isHoveringRowRef.current) {
+      setIsTooltipOpen(false);
+      setHoverTooltipContent(null);
+      setHoverRect(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
+
+  return {
+    isTooltipOpen,
+    hoverTooltipContent,
+    hoverRect,
+    containerRef,
+    rowBidRefs,
+    rowAskRefs,
+    rowBuyHovered,
+    rowSellHovered,
+    handleHover,
+    handleLeave,
+    handleTooltipEnter,
+    handleTooltipLeave,
+  };
+};
+
+export default useOrderBookTooltip;

@@ -1,4 +1,4 @@
-export type TOrderType = 'buy' | 'sell';
+export type TOrderType = 'bid' | 'ask';
 
 export interface ITooltipContent {
   base: number;
@@ -7,11 +7,6 @@ export interface ITooltipContent {
 }
 
 export enum EOrderTypes {
-  buy = 'buy',
-  sell = 'sell',
-}
-
-export enum EPairsTypes {
-  btcusdc = 'btcusdc',
-  ethusdc = 'ethusdc',
+  bid = 'bid',
+  ask = 'ask',
 }

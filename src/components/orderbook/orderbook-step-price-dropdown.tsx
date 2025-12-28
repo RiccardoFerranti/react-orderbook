@@ -9,15 +9,16 @@ import {
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { STEP_PRICES } from './consts';
-import type { EPairsTypes } from './types';
+
+import type { EPairs } from '@/types';
 
 interface IOrderbookDropdownProps {
   value: string;
   handleSetPriceStep: (value: string) => void;
-  pair: keyof typeof EPairsTypes;
+  pair: EPairs;
 }
 
-export default function OrderbookDropdown(props: IOrderbookDropdownProps) {
+export default function OrderbookStepPriceDropdown(props: IOrderbookDropdownProps) {
   const { value, handleSetPriceStep, pair } = props;
 
   const dropdownOptions = STEP_PRICES[pair];

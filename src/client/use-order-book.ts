@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { BINANCE_WS_URL } from '@/consts/config';
+import { EPairs } from '@/types';
 
-interface IOrder {
+export interface IOrder {
   price: number;
   size: number;
 }
 
-interface IOrderBook {
+export interface IOrderBook {
   bids: IOrder[];
   asks: IOrder[];
 }
-
-// WebSocket endpoint for real-time BTC/USDT order book depth (20 levels, updates each 100ms)
-const WS_URL = `${BINANCE_WS_URL}btcusdt@depth20@100ms`;
 
 /**
  * Merge new order book values with previous ones while preserving references
@@ -40,7 +38,26 @@ const mergeValues = (prevValues: IOrder[], newValues: IOrder[]): IOrder[] => {
   return mergedValues;
 };
 
-export function useOrderBook(throttle = 300) {
+/**
+ * React hook to provide live Binance order book for a trading pair, with throttled updates.
+ *
+ * Connects to the Binance WebSocket API and parses live depth updates for the specified pair.
+ *
+ * - Returns the top 20 levels of bids and asks by price and size.
+ * - Uses throttling (default 300ms) to avoid flooding state updates.
+ * - Merges new order book data to avoid unnecessary row re-renders.
+ *
+ * @param {string} [pair='btcusdc'] - Trading pair symbol (lowercase, e.g., 'btcusdc', 'ethusdc').
+ * @param {number} [throttle=300] - Throttle time (ms) for update frequency, minimum time between updates.
+ * @returns {IOrderBook} Order book with bids and asks, e.g. `{ bids: IOrder[], asks: IOrder[] }`
+ *
+ * @example
+ * const { bids, asks } = useOrderBook('ethusdc', 200);
+ * Bids: [ { price: 3500, size: 0.25 }, ... ]
+ * Asks: [ { price: 3501, size: 0.1 }, ... ]
+ */
+
+export function useOrderBook(pair = EPairs.btcusdc, throttle = 300) {
   const wsRef = useRef<WebSocket | null>(null);
   const lastUpdateRef = useRef(0); // timestamp of last update
 
@@ -50,7 +67,9 @@ export function useOrderBook(throttle = 300) {
   });
 
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
+    // WebSocket endpoint for real-time BTC/USDT order book depth (20 levels, updates each 100ms)
+    const wsUrl = `${BINANCE_WS_URL}${pair}@depth20@100ms`;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onmessage = (event) => {
@@ -60,7 +79,7 @@ export function useOrderBook(throttle = 300) {
       lastUpdateRef.current = now;
 
       const data = JSON.parse(event.data);
-
+      console.log(data);
       // Binance sends bids & asks as [price, size] strings
       const bids: IOrder[] = data.bids.map(([price, size]: [string, string]) => ({
         price: Number(price),
@@ -85,7 +104,7 @@ export function useOrderBook(throttle = 300) {
     return () => {
       ws.close();
     };
-  }, []);
+  }, [pair]);
 
   return orderBook;
 }
