@@ -30,8 +30,7 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
       <div
         ref={ref}
         className={cn(
-          `flex ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5
-          transition-colors duration-200 relative *:text-sm`,
+          `flex ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5 relative *:text-sm`,
           {
             'after:pointer-events-none after:content-[""] after:absolute after:left-0 after:w-full':
               (rowHovered ?? 0) >= price || (rowHovered ?? 0) === price,
@@ -48,9 +47,7 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
         onPointerLeave={handleLeave}
       >
         <div
-          className={cn(
-            `absolute right-0 top-0 h-full ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`,
-          )}
+          className={cn(`absolute right-0 top-0 h-full ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`)}
           style={{ width: `${((size * price) / safeMaxSize) * 100}%` }}
         />
         <div className="relative flex w-full">

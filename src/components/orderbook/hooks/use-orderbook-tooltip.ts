@@ -51,13 +51,11 @@ const useOrderBookTooltip = () => {
   const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  // It maps the reference of every row by stable ID, it's used Map in order to have quicker access
-  // to the rows and improve performance
-  const rowBidRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const rowAskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  // Maps price to stable row ID for quick lookups
-  const priceToBidIdRef = useRef<Map<number, string>>(new Map());
-  const priceToAskIdRef = useRef<Map<number, string>>(new Map());
+  // It maps the reference of every row by stable ID, it's used Map in order to have quicker access to the rows
+  // and improve performance
+  const rowBidRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const rowAskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
   const rafRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // It tracks when tooltip is hovered
@@ -93,15 +91,8 @@ const useOrderBookTooltip = () => {
 
     // It stores the animation reference
     rafRef.current = requestAnimationFrame(() => {
-      // Get stable ID from price, then get node from stable ID
-      const priceToIdMap = orderType === EOrderTypes.bid ? priceToBidIdRef.current : priceToAskIdRef.current;
-      const rowRefsMap = orderType === EOrderTypes.bid ? rowBidRefs.current : rowAskRefs.current;
-      const stableId = priceToIdMap.get(price);
-      
-      if (!stableId) return;
-      
-      const node = rowRefsMap.get(stableId);
-
+      // It gets from the rows map the current row hovered
+      const node = orderType === EOrderTypes.bid ? rowBidRefs.current.get(price) : rowAskRefs.current.get(price);
       if (!node || !containerRef.current) return;
 
       const nodeRect = node.getBoundingClientRect();
@@ -112,7 +103,6 @@ const useOrderBookTooltip = () => {
         nodeRect.width,
         nodeRect.height,
       );
-
       // It sets the row position relative to its wrapper
       setHoverRect(relativeNodeRect);
 
@@ -120,7 +110,7 @@ const useOrderBookTooltip = () => {
 
       setIsTooltipOpen(true);
     });
-  }, [isTooltipOpen]);
+  }, []);
 
   const handleLeave = useCallback(() => {
     isHoveringRowRef.current = false;
@@ -172,8 +162,6 @@ const useOrderBookTooltip = () => {
     containerRef,
     rowBidRefs,
     rowAskRefs,
-    priceToBidIdRef,
-    priceToAskIdRef,
     rowBuyHovered,
     rowSellHovered,
     handleHover,
