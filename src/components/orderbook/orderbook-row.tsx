@@ -21,35 +21,43 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
   ({ price, size, handleHover, handleLeave, rowHovered, orderType, isRounding, maxSize }, ref) => {
     const displayBaseFormatted = formatNumber(price, 2);
     const displayQuoteFormatted = formatNumber(size, 5);
-
     const safeMaxSize = maxSize || 1;
 
     const displayAvgPriceFormatted = isRounding ? formatNumberTruncate(price * size) : formatNumber(price * size, 3);
 
     return (
       <div
+        key={price}
         ref={ref}
         className={cn(
           `flex ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5 relative *:text-sm`,
           {
             'after:pointer-events-none after:content-[""] after:absolute after:left-0 after:w-full':
               (rowHovered ?? 0) >= price || (rowHovered ?? 0) === price,
+
             'after:h-full after:bg-(--card-foreground)/5': (rowHovered ?? 0) >= price,
-            'after:border-dashed after:border-border': (rowHovered ?? 0) === price,
+
+            'after:border-dotted after:border-border': (rowHovered ?? 0) === price,
+
             'after:top-0 after:border-t': orderType === EOrderTypes.bid && rowHovered === price,
+
             'after:top-0': orderType === EOrderTypes.bid && (rowHovered ?? 0) >= price,
+
             'after:bottom-0 after:border-b': orderType === EOrderTypes.ask && rowHovered === price,
+
             'after:bottom-0': orderType === EOrderTypes.ask && (rowHovered ?? 0) >= price,
           },
         )}
-        style={{ '--after-width': `${((size * price) / safeMaxSize) * 100}%` } as any}
         onPointerEnter={() => handleHover(price, orderType)}
         onPointerLeave={handleLeave}
       >
         <div
           className={cn(`absolute right-0 top-0 h-full ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`)}
-          style={{ width: `${((size * price) / safeMaxSize) * 100}%` }}
+          style={{
+            width: `${((size * price) / safeMaxSize) * 100}%`,
+          }}
         />
+
         <div className="relative flex w-full">
           <span className="flex-1 text-start">{displayBaseFormatted}</span>
           <span className="flex-1 text-end">{displayQuoteFormatted}</span>
@@ -60,10 +68,11 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
   },
 );
 
-export default memo(OrderBookRow, (prev, next) => {
-  return prev.price === next.price && prev.size === next.size && prev.rowHovered === next.rowHovered;
-});
-// export default memo(OrderBookRow, (prev, next) => prev.price === next.price && prev.size === next.size);
+export default memo(OrderBookRow);
+
+// export default memo(OrderBookRow, (prev, next) => {
+//   return prev.price === next.price && prev.size === next.size && prev.rowHovered === next.rowHovered;
+// });
 
 // const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
 //   ({ price, size, handleHover, handleLeave, rowHovered, orderType, isRounding, maxSize }, ref) => {

@@ -19,7 +19,6 @@ import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import DefaultBuySellIcon from '@/assets/buy-sell-icon';
 import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
@@ -28,6 +27,7 @@ import { useOrderBook } from '@/client/use-order-book';
 import useExchangeInfo from '@/client/use-exchange-info';
 import { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
+import mockOrderBookData from '@/mock/mocked-data';
 
 export interface IPopoverFields {
   rounding: boolean;
@@ -48,7 +48,10 @@ export default function OrderBook(props: IOrderBookProps) {
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
   const [priceStep, setPriceStep] = useState('0.01');
 
-  const { bids, asks } = useOrderBook(pair);
+  const {
+    orderBook: { bids, asks },
+    isUpdatingRef,
+  } = useOrderBook(pair);
   // const { bids, asks } = mockOrderBookData;
 
   const { data } = useExchangeInfo(pair);
@@ -82,8 +85,8 @@ export default function OrderBook(props: IOrderBookProps) {
   const cumulativeBidData = useCumulativeTooltipData(bids, sizeDecimals, tickDecimals, EOrderTypes.bid);
   const cumulativeAskData = useCumulativeTooltipData(asks, sizeDecimals, tickDecimals, EOrderTypes.ask);
 
-  const bidsPriceStepOrdered = usePriceStepOrdered(bids, priceStep, true);
-  const asksPriceStepOrdered = usePriceStepOrdered(asks, priceStep, false);
+  const bidsPriceStepOrdered = usePriceStepOrdered(bids, priceStep, view.default, true);
+  const asksPriceStepOrdered = usePriceStepOrdered(asks, priceStep, view.default, false);
 
   const { bidPercentage, askPercentage } = useBidAskPercentage(bids, asks);
 
@@ -163,7 +166,7 @@ export default function OrderBook(props: IOrderBookProps) {
                 <div
                   className={cn(
                     'space-y-1npx pe-3 orderbook-radix-table-full -mb-2 overflow-hidden',
-                    view.bid ? 'min-h-120 h-full' : 'h-72',
+                    view.bid ? 'min-h-120 h-full' : 'h-60',
                   )}
                 >
                   <div className="flex flex-col justify-end h-full">
@@ -198,7 +201,7 @@ export default function OrderBook(props: IOrderBookProps) {
 
               {/* Asks */}
               {(view.default || view.ask) && (
-                <ScrollArea className={cn('space-y-1npx pe-3 -mt-2', view.ask ? 'min-h-120 h-full' : 'h-72')}>
+                <div className={cn('space-y-1npx pe-3 -mt-2 overflow-hidden', view.ask ? 'min-h-120 h-full' : 'h-60')}>
                   <div className="flex flex-col justify-start h-full">
                     {asksPriceStepOrdered.map(({ price, size }) => {
                       return (
@@ -220,10 +223,10 @@ export default function OrderBook(props: IOrderBookProps) {
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
               )}
             </div>
-            {/* {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />} */}
+            {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />}
           </CardContent>
         </Card>
 

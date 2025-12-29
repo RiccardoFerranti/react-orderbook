@@ -8,9 +8,16 @@ import { useMemo } from 'react';
  * @param priceStep Step as string, e.g., '0.01', '0.1', '1', '10'
  * @param isBid Whether the orders are bids (descending) or asks (ascending)
  */
-const usePriceStepOrdered = (orders: { price: number; size: number }[], priceStep: string, isBid: boolean) => {
+const usePriceStepOrdered = (
+  orders: { price: number; size: number }[],
+  priceStep: string,
+  defaultView: boolean,
+  isBid: boolean,
+) => {
   return useMemo(() => {
-    if (priceStep === '0.01') return orders;
+    if (defaultView && priceStep === '0.01') {
+      return !isBid ? orders.slice(0, 10) : orders.slice(10, orders.length);
+    }
 
     const grouped = orders.reduce(
       (acc, next) => {
