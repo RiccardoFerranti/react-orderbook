@@ -12,9 +12,9 @@ export default function OrderbookBidAskPercentage(props: IOrderbookBidAskPercent
         <span className="w-12">{bidPercentage.toFixed(2)}%</span>
         <div className="flex flex-1 h-2 rounded overflow-hidden bg-gray-200">
           {/* Bid part */}
-          <div className="bg-green-500 h-full transition-[flex-grow] duration-300 ease-out" style={{ flex: bidPercentage }} />
+          <div className="bg-green-500 h-full" style={{ flex: bidPercentage }} />
           {/* Ask part */}
-          <div className="bg-red-500 h-full transition-[flex-grow] duration-300 ease-out" style={{ flex: askPercentage }} />
+          <div className="bg-red-500 h-full" style={{ flex: askPercentage }} />
         </div>
         <span className="w-12">{askPercentage.toFixed(2)}%</span>
       </div>

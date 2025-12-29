@@ -57,7 +57,7 @@ const mergeValues = (prevValues: IOrder[], newValues: IOrder[]): IOrder[] => {
  * Asks: [ { price: 3501, size: 0.1 }, ... ]
  */
 
-export function useOrderBook(pair = EPairs.btcusdc, throttle = 300) {
+export function useOrderBook(pair = EPairs.btcusdc, throttle = 500) {
   const wsRef = useRef<WebSocket | null>(null);
   const lastUpdateRef = useRef(0); // timestamp of last update
 
@@ -79,7 +79,7 @@ export function useOrderBook(pair = EPairs.btcusdc, throttle = 300) {
       lastUpdateRef.current = now;
 
       const data = JSON.parse(event.data);
-      console.log(data);
+
       // Binance sends bids & asks as [price, size] strings
       const bids: IOrder[] = data.bids.map(([price, size]: [string, string]) => ({
         price: Number(price),

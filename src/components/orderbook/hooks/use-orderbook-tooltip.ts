@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import type { TOrderType } from '../types';
 import { EOrderTypes } from '../types';
@@ -11,8 +11,10 @@ import { EOrderTypes } from '../types';
  * - hoverTooltipContent: Object containing the hovered row's price and orderType, or null if none.
  * - hoverRect: DOMRect giving the position of the hovered row, or null if none.
  * - containerRef: Ref to the order book container (div).
- * - rowBidRefs: Ref (Map<number,HTMLDivElement>) of bid row DOM nodes, keyed by price.
- * - rowAskRefs: Ref (Map<number,HTMLDivElement>) of ask row DOM nodes, keyed by price.
+ * - rowBidRefs: Ref (Map<string,HTMLDivElement>) of bid row DOM nodes, keyed by stable ID.
+ * - rowAskRefs: Ref (Map<string,HTMLDivElement>) of ask row DOM nodes, keyed by stable ID.
+ * - priceToBidIdRef: Ref (Map<number,string>) mapping price to stable bid row ID.
+ * - priceToAskIdRef: Ref (Map<number,string>) mapping price to stable ask row ID.
  * - rowBuyHovered: Ref (number | null), the price of the currently hovered buy row.
  * - rowSellHovered: Ref (number | null), the price of the currently hovered sell row.
  * - handleHover: Function called when a user hovers a row; updates position and tooltip content.
@@ -27,8 +29,10 @@ import { EOrderTypes } from '../types';
  *   hoverTooltipContent: { price: number, orderType: TOrderType } | null,
  *   hoverRect: DOMRect | null,
  *   containerRef: React.RefObject<HTMLDivElement>,
- *   rowBidRefs: React.RefObject<Map<number, HTMLDivElement>>,
- *   rowAskRefs: React.RefObject<Map<number, HTMLDivElement>>,
+ *   rowBidRefs: React.RefObject<Map<string, HTMLDivElement>>,
+ *   rowAskRefs: React.RefObject<Map<string, HTMLDivElement>>,
+ *   priceToBidIdRef: React.RefObject<Map<number, string>>,
+ *   priceToAskIdRef: React.RefObject<Map<number, string>>,
  *   rowBuyHovered: React.MutableRefObject<number | null>,
  *   rowSellHovered: React.MutableRefObject<number | null>,
  *   handleHover: (price: number, orderType: TOrderType) => void,
@@ -47,9 +51,13 @@ const useOrderBookTooltip = () => {
   const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  // It maps the reference of every row, it's used Map in order to have quicker access to the rows and improve performance
-  const rowBidRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const rowAskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  // It maps the reference of every row by stable ID, it's used Map in order to have quicker access
+  // to the rows and improve performance
+  const rowBidRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const rowAskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // Maps price to stable row ID for quick lookups
+  const priceToBidIdRef = useRef<Map<number, string>>(new Map());
+  const priceToAskIdRef = useRef<Map<number, string>>(new Map());
   const rafRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // It tracks when tooltip is hovered
@@ -61,6 +69,10 @@ const useOrderBookTooltip = () => {
   const rowSellHovered = useRef<number | null>(null);
 
   const handleHover = useCallback((price: number, orderType: TOrderType) => {
+    // === NEW: Skip if hovering the same row ===
+    const currentHovered = orderType === EOrderTypes.bid ? rowBuyHovered.current : rowSellHovered.current;
+    if (currentHovered === price && isTooltipOpen) return;
+
     // It cancels pending close
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
@@ -81,8 +93,15 @@ const useOrderBookTooltip = () => {
 
     // It stores the animation reference
     rafRef.current = requestAnimationFrame(() => {
-      // It gets from the rows map the current row hovered
-      const node = orderType === EOrderTypes.bid ? rowBidRefs.current.get(price) : rowAskRefs.current.get(price);
+      // Get stable ID from price, then get node from stable ID
+      const priceToIdMap = orderType === EOrderTypes.bid ? priceToBidIdRef.current : priceToAskIdRef.current;
+      const rowRefsMap = orderType === EOrderTypes.bid ? rowBidRefs.current : rowAskRefs.current;
+      const stableId = priceToIdMap.get(price);
+      
+      if (!stableId) return;
+      
+      const node = rowRefsMap.get(stableId);
+
       if (!node || !containerRef.current) return;
 
       const nodeRect = node.getBoundingClientRect();
@@ -93,6 +112,7 @@ const useOrderBookTooltip = () => {
         nodeRect.width,
         nodeRect.height,
       );
+
       // It sets the row position relative to its wrapper
       setHoverRect(relativeNodeRect);
 
@@ -100,7 +120,7 @@ const useOrderBookTooltip = () => {
 
       setIsTooltipOpen(true);
     });
-  }, []);
+  }, [isTooltipOpen]);
 
   const handleLeave = useCallback(() => {
     isHoveringRowRef.current = false;
@@ -138,12 +158,12 @@ const useOrderBookTooltip = () => {
     }
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    };
-  }, []);
+  // useEffect(() => {
+  //   return () => {
+  //     if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  //     if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+  //   };
+  // }, []);
 
   return {
     isTooltipOpen,
@@ -152,6 +172,8 @@ const useOrderBookTooltip = () => {
     containerRef,
     rowBidRefs,
     rowAskRefs,
+    priceToBidIdRef,
+    priceToAskIdRef,
     rowBuyHovered,
     rowSellHovered,
     handleHover,

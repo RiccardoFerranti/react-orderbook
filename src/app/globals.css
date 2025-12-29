@@ -126,4 +126,8 @@
   .orderbook-radix-table-full > div  > div {
     height: 100%;
   }
+
+  .orderbook-row::after {
+    width: var(--after-width);
+  }
 }

@@ -25,7 +25,6 @@ import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
 import { cn } from '@/lib/utils';
 import { useOrderBook } from '@/client/use-order-book';
-import mockOrderBookData from '@/mock/mocked-data';
 import useExchangeInfo from '@/client/use-exchange-info';
 import { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
@@ -50,13 +49,12 @@ export default function OrderBook(props: IOrderBookProps) {
   const [priceStep, setPriceStep] = useState('0.01');
 
   const { bids, asks } = useOrderBook(pair);
+  // const { bids, asks } = mockOrderBookData;
 
   const { data } = useExchangeInfo(pair);
 
   const sizeDecimals = extractDecimals(data?.stepSize);
   const tickDecimals = extractDecimals(data?.tickSize);
-
-  // const { bids, asks } = mockOrderBookData;
 
   const handleSetPopoverFields = useCallback((value: boolean, field: keyof typeof popoverFieldsInitialState) => {
     setPopoverFields((prev) => ({
@@ -96,6 +94,8 @@ export default function OrderBook(props: IOrderBookProps) {
     containerRef,
     rowBidRefs,
     rowAskRefs,
+    priceToBidIdRef,
+    priceToAskIdRef,
     rowBuyHovered,
     rowSellHovered,
     handleHover,
@@ -116,14 +116,17 @@ export default function OrderBook(props: IOrderBookProps) {
   const spread = bestBid && bestAsk ? formatNumber(bestAsk - bestBid, 2) : '--';
   const spreadPct = bestBid && bestAsk ? formatNumber(((bestAsk - bestBid) / ((bestBid + bestAsk) / 2)) * 100, 4) : '--';
 
-  // const maxBidSize = Math.max(...bids.slice(0, 20).map((b) => b.size));
+  const maxBidSize = useMemo(() => {
+    if (bids.length === 0) return 1; // prevent divide by 0 / NaN
+    return Math.max(...bids.slice(0, 20).map((r) => r.size * r.price));
+  }, [bids]);
 
-  // const maxBidSize = useMemo(() => {
-  //   if (bids.length === 0) return 1; // prevent divide by 0 / NaN
-  //   return Math.max(...bids.slice(0, 20).map((r) => r.size * r.price));
-  // }, [bids]);
+  const maxAskSize = useMemo(() => {
+    if (asks.length === 0) return 1; // prevent divide by 0 / NaN
+    return Math.max(...asks.slice(0, 20).map((r) => r.size * r.price));
+  }, [bids]);
 
-  // console.log('maxBidSize', maxBidSize);
+  // console.log('price', price);
   return (
     <TooltipProvider>
       <div ref={containerRef} className="relative w-full max-w-md">
@@ -159,29 +162,46 @@ export default function OrderBook(props: IOrderBookProps) {
 
               {/* Bids */}
               {(view.default || view.bid) && (
-                <ScrollArea
-                  className={cn('space-y-1npx pe-3 orderbook-radix-table-full -mb-2', view.bid ? 'min-h-120 h-full' : 'h-72')}
+                <div
+                  className={cn(
+                    'space-y-1npx pe-3 orderbook-radix-table-full -mb-2 overflow-hidden',
+                    view.bid ? 'min-h-120 h-full' : 'h-72',
+                  )}
                 >
                   <div className="flex flex-col justify-end h-full">
-                    {bidsPriceStepOrdered.map(({ price, size }) => (
-                      <OrderBookRow
-                        key={price}
-                        price={price}
-                        size={size}
-                        handleHover={handleHover}
-                        handleLeave={handleLeave}
-                        orderType={EOrderTypes.bid}
-                        ref={(el) => {
-                          if (el) rowBidRefs.current.set(price, el);
-                          else rowBidRefs.current.delete(price);
-                        }}
-                        rowHovered={rowBuyHovered.current}
-                        isRounding={popoverFields.rounding}
-                        // maxSize={maxBidSize}
+                    {/* {hoverRect && (
+                      <div
+                        className="absolute left-0 right-0 bg-yellow-200 opacity-30 pointer-events-none"
+                        style={{ top: hoverRect.top, height: hoverRect.height }}
                       />
-                    ))}
+                    )} */}
+                    {bidsPriceStepOrdered.map(({ price, size }, index) => {
+                      const stableId = `bid-${index}`;
+                      return (
+                        <OrderBookRow
+                          key={stableId}
+                          price={price}
+                          size={size}
+                          handleHover={handleHover}
+                          handleLeave={handleLeave}
+                          orderType={EOrderTypes.bid}
+                          ref={(el) => {
+                            if (el) {
+                              rowBidRefs.current.set(stableId, el);
+                              priceToBidIdRef.current.set(price, stableId);
+                            } else {
+                              rowBidRefs.current.delete(stableId);
+                              priceToBidIdRef.current.delete(price);
+                            }
+                          }}
+                          rowHovered={rowBuyHovered.current}
+                          isRounding={popoverFields.rounding}
+                          maxSize={maxBidSize}
+                        />
+                      );
+                    })}
                   </div>
-                </ScrollArea>
+                </div>
               )}
 
               <>
@@ -193,28 +213,37 @@ export default function OrderBook(props: IOrderBookProps) {
               {/* Asks */}
               {(view.default || view.ask) && (
                 <ScrollArea className={cn('space-y-1npx pe-3 -mt-2', view.ask ? 'min-h-120 h-full' : 'h-72')}>
-                  {asksPriceStepOrdered.map(({ price, size }) => (
-                    <div className="flex flex-col justify-start h-full">
-                      <OrderBookRow
-                        key={price}
-                        price={price}
-                        size={size}
-                        handleHover={handleHover}
-                        handleLeave={handleLeave}
-                        orderType={EOrderTypes.ask}
-                        ref={(el) => {
-                          if (el) rowAskRefs.current.set(price, el);
-                          else rowAskRefs.current.delete(price);
-                        }}
-                        rowHovered={rowSellHovered.current}
-                        isRounding={popoverFields.rounding}
-                      />
-                    </div>
-                  ))}
+                  <div className="flex flex-col justify-start h-full">
+                    {asksPriceStepOrdered.map(({ price, size }, index) => {
+                      const stableId = `ask-${index}`;
+                      return (
+                        <OrderBookRow
+                          key={stableId}
+                          price={price}
+                          size={size}
+                          handleHover={handleHover}
+                          handleLeave={handleLeave}
+                          orderType={EOrderTypes.ask}
+                          ref={(el) => {
+                            if (el) {
+                              rowAskRefs.current.set(stableId, el);
+                              priceToAskIdRef.current.set(price, stableId);
+                            } else {
+                              rowAskRefs.current.delete(stableId);
+                              priceToAskIdRef.current.delete(price);
+                            }
+                          }}
+                          rowHovered={rowSellHovered.current}
+                          isRounding={popoverFields.rounding}
+                          maxSize={maxAskSize}
+                        />
+                      );
+                    })}
+                  </div>
                 </ScrollArea>
               )}
             </div>
-            {/* {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />} */}
+            {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />}
           </CardContent>
         </Card>
 

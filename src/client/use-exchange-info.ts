@@ -48,7 +48,6 @@ const useExchangeInfo = (pair: string) => {
     },
   });
 
-  console.log(data);
   return {
     data,
     isLoading,
