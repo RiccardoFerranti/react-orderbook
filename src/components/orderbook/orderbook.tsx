@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 
 import { TooltipProvider } from '../ui/tooltip';
 import OrderbookRowTooltip from './orderbook-row-tooltip';
@@ -100,13 +100,15 @@ export default function OrderBook(props: IOrderBookProps) {
     containerRef,
     rowBidRefs,
     rowAskRefs,
-    rowBuyHovered,
-    rowSellHovered,
     handleHover,
     handleLeave,
     handleTooltipEnter,
     handleTooltipLeave,
     hoveredIndexRef,
+    bidRowHoveredById,
+    askRowHoveredById,
+    isHoveringBidRowRef,
+    isHoveringAskRowRef,
   } = useOrderBookTooltip();
 
   const tooltipData = useMemo(() => {
@@ -203,22 +205,33 @@ export default function OrderBook(props: IOrderBookProps) {
                   <div className="relative" style={{ height: bidsPriceStepOrdered.length * ROW_HEIGHT }} ref={bidContainerRef}>
                     {bidsPriceStepOrdered.map(({ price, size }, index) => {
                       return (
-                        <OrderBookRow
-                          key={price}
-                          price={price}
-                          size={size}
-                          handleHover={handleHover}
-                          handleLeave={handleLeave}
-                          orderType={EOrderTypes.bid}
-                          ref={(el) => {
-                            if (el) rowBidRefs.current.set(price, el);
-                            else rowBidRefs.current.delete(price);
-                          }}
-                          rowHovered={rowBuyHovered.current}
-                          isRounding={popoverFields.rounding}
-                          maxSize={maxBidSize}
-                          index={index}
-                        />
+                        <Fragment key={price}>
+                          {isHoveringBidRowRef.current && bidRowHoveredById.current && bidRowHoveredById.current <= index ? (
+                            <div
+                              className={cn(`left-0 top-0 absolute pointer-events-none w-full z-1 bg-(--card-foreground)/5`, {
+                                'border-t border-dashed border-border': bidRowHoveredById?.current === index,
+                              })}
+                              style={{
+                                top: index * ROW_HEIGHT,
+                                height: ROW_HEIGHT,
+                              }}
+                            />
+                          ) : null}
+                          <OrderBookRow
+                            price={price}
+                            size={size}
+                            handleHover={handleHover}
+                            handleLeave={handleLeave}
+                            orderType={EOrderTypes.bid}
+                            ref={(el) => {
+                              if (el) rowBidRefs.current.set(price, el);
+                              else rowBidRefs.current.delete(price);
+                            }}
+                            isRounding={popoverFields.rounding}
+                            maxSize={maxBidSize}
+                            index={index}
+                          />
+                        </Fragment>
                       );
                     })}
                   </div>
@@ -237,22 +250,33 @@ export default function OrderBook(props: IOrderBookProps) {
                   <div className="relative" style={{ height: asksPriceStepOrdered.length * ROW_HEIGHT }} ref={askContainerRef}>
                     {asksPriceStepOrdered.map(({ price, size }, index) => {
                       return (
-                        <OrderBookRow
-                          key={price}
-                          price={price}
-                          size={size}
-                          handleHover={handleHover}
-                          handleLeave={handleLeave}
-                          orderType={EOrderTypes.ask}
-                          ref={(el) => {
-                            if (el) rowAskRefs.current.set(price, el);
-                            else rowAskRefs.current.delete(price);
-                          }}
-                          rowHovered={rowSellHovered.current}
-                          isRounding={popoverFields.rounding}
-                          maxSize={maxAskSize}
-                          index={index}
-                        />
+                        <Fragment key={price}>
+                          {isHoveringAskRowRef.current && askRowHoveredById.current && askRowHoveredById.current >= index ? (
+                            <div
+                              className={cn(`left-0 bottom-0 absolute pointer-events-none w-full z-1 bg-(--card-foreground)/5`, {
+                                'border-b border-dashed border-border': askRowHoveredById?.current === index,
+                              })}
+                              style={{
+                                top: index * ROW_HEIGHT,
+                                height: ROW_HEIGHT,
+                              }}
+                            />
+                          ) : null}
+                          <OrderBookRow
+                            price={price}
+                            size={size}
+                            handleHover={handleHover}
+                            handleLeave={handleLeave}
+                            orderType={EOrderTypes.ask}
+                            ref={(el) => {
+                              if (el) rowAskRefs.current.set(price, el);
+                              else rowAskRefs.current.delete(price);
+                            }}
+                            isRounding={popoverFields.rounding}
+                            maxSize={maxAskSize}
+                            index={index}
+                          />
+                        </Fragment>
                       );
                     })}
                   </div>

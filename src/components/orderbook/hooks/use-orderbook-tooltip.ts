@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { TOrderType } from '../types';
 import { EOrderTypes } from '../types';
@@ -62,11 +62,12 @@ const useOrderBookTooltip = () => {
   const isHoveringTooltipRef = useRef(false);
 
   // It tracks when row is hovered
-  const isHoveringRowRef = useRef(false);
+  const isHoveringBidRowRef = useRef(false);
+  const isHoveringAskRowRef = useRef(false);
 
-  // It tracks when buy or sell row are hovered
-  const rowBuyHovered = useRef<number | null>(null);
-  const rowSellHovered = useRef<number | null>(null);
+  // It tracks by index when a bid or ask row are hovered
+  const bidRowHoveredById = useRef<number | null>(null);
+  const askRowHoveredById = useRef<number | null>(null);
 
   const hoveredIndexRef = useRef<number | null>(null);
 
@@ -77,13 +78,13 @@ const useOrderBookTooltip = () => {
       closeTimeoutRef.current = null;
     }
 
-    isHoveringRowRef.current = true;
-
     // store hovered price (for range highlight)
     if (orderType === EOrderTypes.bid) {
-      rowBuyHovered.current = price;
+      isHoveringBidRowRef.current = true;
+      bidRowHoveredById.current = index;
     } else {
-      rowSellHovered.current = price;
+      isHoveringAskRowRef.current = true;
+      askRowHoveredById.current = index;
     }
 
     // store hovered index (for tooltip positioning)
@@ -95,12 +96,13 @@ const useOrderBookTooltip = () => {
   }, []);
 
   const handleLeave = useCallback(() => {
-    isHoveringRowRef.current = false;
-    rowBuyHovered.current = null;
-    rowSellHovered.current = null;
+    isHoveringBidRowRef.current = false;
+    isHoveringAskRowRef.current = false;
+    bidRowHoveredById.current = null;
+    askRowHoveredById.current = null;
 
     closeTimeoutRef.current = setTimeout(() => {
-      if (!isHoveringRowRef.current && !isHoveringTooltipRef.current) {
+      if (!isHoveringBidRowRef.current && isHoveringAskRowRef.current && !isHoveringTooltipRef.current) {
         setIsTooltipOpen(false);
         setHoverTooltipContent(null);
         hoveredIndexRef.current = null;
@@ -122,19 +124,18 @@ const useOrderBookTooltip = () => {
     isHoveringTooltipRef.current = false;
 
     // When we leave the tooltip if the hover is not on the row, we can close the tooltip and reset all
-    if (!isHoveringRowRef.current) {
+    if (!isHoveringBidRowRef.current && !isHoveringAskRowRef.current) {
       setIsTooltipOpen(false);
       setHoverTooltipContent(null);
       setHoverRect(null);
     }
   }, []);
 
-  // useEffect(() => {
-  //   return () => {
-  //     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-  //     if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-  //   };
-  // }, []);
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
 
   return {
     isTooltipOpen,
@@ -144,12 +145,14 @@ const useOrderBookTooltip = () => {
     hoveredIndexRef,
     rowBidRefs,
     rowAskRefs,
-    rowBuyHovered,
-    rowSellHovered,
     handleHover,
     handleLeave,
     handleTooltipEnter,
     handleTooltipLeave,
+    bidRowHoveredById,
+    askRowHoveredById,
+    isHoveringBidRowRef,
+    isHoveringAskRowRef,
   };
 };
 
