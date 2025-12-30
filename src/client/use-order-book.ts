@@ -106,5 +106,5 @@ export function useOrderBook(pair = EPairs.btcusdc, throttle = 500) {
     };
   }, [pair]);
 
-  return orderBook;
+  return { orderBook, isOrderBookBidsLoading: !orderBook.bids.length, isOrderBookAsksLoading: !orderBook.asks.length };
 }

@@ -14,7 +14,15 @@ import useCumulativeTooltipData from './hooks/use-cumulative-tooltip-data';
 import useOrderBookTooltip from './hooks/use-orderbook-tooltip';
 import OrderbookBidAskPercentage from './orderbook-bid-ask-percentage';
 import { useBidAskPercentage } from './hooks/use-bid-ask-percentage';
-import { TOOLTIP_HEIGHT, TOOLTIP_WIDTH } from './consts';
+import {
+  ORDERBOOK_LABELS,
+  ROW_HEIGHT,
+  ROWS_NUMBER_EXPANDED,
+  ROWS_NUMBER_NOT_EXPANDED,
+  TOOLTIP_HEIGHT,
+  TOOLTIP_WIDTH,
+} from './consts';
+import OrderbookSkeletonRow from './orderbook-skeleton-row';
 
 import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
@@ -26,7 +34,7 @@ import SellIcon from '@/assets/sell-icon';
 import { cn } from '@/lib/utils';
 import { useOrderBook } from '@/client/use-order-book';
 import useExchangeInfo from '@/client/use-exchange-info';
-import { EPairs } from '@/types';
+import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
 import mockOrderBookData from '@/mock/mocked-data';
 
@@ -42,8 +50,6 @@ interface IOrderBookProps {
   pair: any;
 }
 
-export const ROW_HEIGHT = 25; // px (must match CSS)
-
 export default function OrderBook(props: IOrderBookProps) {
   const { pair } = props;
 
@@ -55,7 +61,11 @@ export default function OrderBook(props: IOrderBookProps) {
   const bidContainerRef = useRef<HTMLDivElement | null>(null);
   const askContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const { bids, asks } = useOrderBook(pair);
+  const {
+    orderBook: { bids, asks },
+    isOrderBookBidsLoading,
+    isOrderBookAsksLoading,
+  } = useOrderBook(pair);
   // const { bids, asks } = mockOrderBookData;
 
   const { data } = useExchangeInfo(pair);
@@ -134,7 +144,7 @@ export default function OrderBook(props: IOrderBookProps) {
   const maxAskSize = useMemo(() => {
     if (asks.length === 0) return 1; // prevent divide by 0 / NaN
     return Math.max(...asks.slice(0, 20).map((r) => r.size * r.price));
-  }, [bids]);
+  }, [asks]);
 
   const tooltipCoodinates = useMemo(() => {
     const rowNode =
@@ -166,6 +176,10 @@ export default function OrderBook(props: IOrderBookProps) {
     return { tooltipTop, tooltipLeft };
   }, [hoverTooltipContent]);
 
+  const { priceToken, amountToken, totalToken } = ORDERBOOK_LABELS[pair as keyof typeof EPairs];
+
+  const visibleRows = view.default ? ROWS_NUMBER_NOT_EXPANDED : ROWS_NUMBER_EXPANDED;
+
   return (
     <TooltipProvider>
       <div ref={containerRef} className="relative w-full max-w-md">
@@ -188,52 +202,80 @@ export default function OrderBook(props: IOrderBookProps) {
                   <SellIcon />
                 </Button>
               </div>
-              <OrderbookStepPriceDropdown value={priceStep} handleSetPriceStep={handleSetPriceStep} pair={EPairs.btcusdc} />
+              <OrderbookStepPriceDropdown value={priceStep} handleSetPriceStep={handleSetPriceStep} pair={pair} />
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
               <div className="flex">
-                <div className="text-sm text-muted-foreground flex-1">Price (USDC)</div>
-                <div className="text-sm text-muted-foreground flex-1 text-end">Amount (BTC)</div>
-                <div className="text-sm text-muted-foreground flex-1 text-end">Total (USDC)</div>
+                <div className="text-sm text-muted-foreground flex-1">Price ({priceToken})</div>
+                <div className="text-sm text-muted-foreground flex-1 text-end">Amount ({amountToken})</div>
+                <div className="text-sm text-muted-foreground flex-1 text-end">Total ({totalToken})</div>
               </div>
 
-              {/* Bids */}
-              {(view.default || view.bid) && (
-                <div className={cn('space-y-1npx orderbook-radix-table-full -mb-2')}>
-                  <div className="relative" style={{ height: bidsPriceStepOrdered.length * ROW_HEIGHT }} ref={bidContainerRef}>
-                    {bidsPriceStepOrdered.map(({ price, size }, index) => {
-                      return (
-                        <Fragment key={price}>
-                          {isHoveringBidRowRef.current && bidRowHoveredById.current && bidRowHoveredById.current <= index ? (
-                            <div
-                              className={cn(`left-0 top-0 absolute pointer-events-none w-full z-1 bg-(--card-foreground)/5`, {
-                                'border-t border-dashed border-border': bidRowHoveredById?.current === index,
-                              })}
-                              style={{
-                                top: index * ROW_HEIGHT,
-                                height: ROW_HEIGHT,
+              {/* Asks */}
+              {(view.default || view.ask) && (
+                <div className={cn('space-y-1npx -mt-2')}>
+                  <div
+                    ref={askContainerRef}
+                    className="relative overflow-hidden"
+                    style={{
+                      minHeight:
+                        view.ask && !view.bid ? ROWS_NUMBER_EXPANDED * ROW_HEIGHT : ROWS_NUMBER_NOT_EXPANDED * ROW_HEIGHT,
+                      height: visibleRows * ROW_HEIGHT,
+                    }}
+                  >
+                    {/* REAL ROWS */}
+                    {!isOrderBookAsksLoading &&
+                      asksPriceStepOrdered.slice(0, visibleRows).map((ask, index) => {
+                        if (!ask) return null;
+
+                        return (
+                          <Fragment key={ask.price}>
+                            {/* HOVER / SELECTION OVERLAY */}
+                            {isHoveringAskRowRef.current &&
+                              askRowHoveredById.current !== null &&
+                              askRowHoveredById.current >= index && (
+                                <div
+                                  className={cn('absolute left-0 pointer-events-none w-full z-1 bg-(--card-foreground)/5', {
+                                    'border-b border-dashed border-border': askRowHoveredById.current === index,
+                                  })}
+                                  style={{
+                                    top: index * ROW_HEIGHT,
+                                    height: ROW_HEIGHT,
+                                  }}
+                                />
+                              )}
+
+                            <OrderBookRow
+                              price={ask.price}
+                              size={ask.size}
+                              handleHover={handleHover}
+                              handleLeave={handleLeave}
+                              orderType={EOrderTypes.ask}
+                              ref={(el) => {
+                                if (el) rowAskRefs.current.set(ask.price, el);
+                                else rowAskRefs.current.delete(ask.price);
                               }}
+                              isRounding={popoverFields.rounding}
+                              maxSize={maxAskSize}
+                              index={index}
                             />
-                          ) : null}
-                          <OrderBookRow
-                            price={price}
-                            size={size}
-                            handleHover={handleHover}
-                            handleLeave={handleLeave}
-                            orderType={EOrderTypes.bid}
-                            ref={(el) => {
-                              if (el) rowBidRefs.current.set(price, el);
-                              else rowBidRefs.current.delete(price);
-                            }}
-                            isRounding={popoverFields.rounding}
-                            maxSize={maxBidSize}
-                            index={index}
-                          />
-                        </Fragment>
-                      );
-                    })}
+                          </Fragment>
+                        );
+                      })}
+
+                    {/* SKELETON ROWS (FILL GAP / LOADING / EXPAND) */}
+                    {Array.from(
+                      {
+                        length: isOrderBookAsksLoading ? visibleRows : Math.max(visibleRows - asksPriceStepOrdered.length, 0),
+                      },
+                      (_, i) => {
+                        const index = isOrderBookAsksLoading ? i : asksPriceStepOrdered.length + i;
+
+                        return <OrderbookSkeletonRow key={`ask-skeleton-${index}`} index={index} />;
+                      },
+                    )}
                   </div>
                 </div>
               )}
@@ -244,44 +286,72 @@ export default function OrderBook(props: IOrderBookProps) {
                 <Separator className="bg-border/80" />
               </>
 
-              {/* Asks */}
-              {(view.default || view.ask) && (
-                <div className={cn('space-y-1npx -mt-2')}>
-                  <div className="relative" style={{ height: asksPriceStepOrdered.length * ROW_HEIGHT }} ref={askContainerRef}>
-                    {asksPriceStepOrdered.map(({ price, size }, index) => {
-                      return (
-                        <Fragment key={price}>
-                          {isHoveringAskRowRef.current && askRowHoveredById.current && askRowHoveredById.current >= index ? (
-                            <div
-                              className={cn(`left-0 bottom-0 absolute pointer-events-none w-full z-1 bg-(--card-foreground)/5`, {
-                                'border-b border-dashed border-border': askRowHoveredById?.current === index,
-                              })}
-                              style={{
-                                top: index * ROW_HEIGHT,
-                                height: ROW_HEIGHT,
+              {/* Bids */}
+              {(view.default || view.bid) && (
+                <div className={cn('space-y-1npx orderbook-radix-table-full -mb-2')}>
+                  <div
+                    ref={bidContainerRef}
+                    className="relative overflow-hidden"
+                    style={{
+                      height: visibleRows * ROW_HEIGHT,
+                      minHeight:
+                        !view.ask && view.bid ? ROWS_NUMBER_EXPANDED * ROW_HEIGHT : ROWS_NUMBER_NOT_EXPANDED * ROW_HEIGHT,
+                    }}
+                  >
+                    {/* REAL ROWS */}
+                    {!isOrderBookBidsLoading &&
+                      bidsPriceStepOrdered.slice(0, visibleRows).map((bid, index) => {
+                        if (!bid) return null;
+
+                        return (
+                          <Fragment key={bid.price}>
+                            {/* HOVER / SELECTION OVERLAY */}
+                            {isHoveringBidRowRef.current &&
+                              bidRowHoveredById.current !== null &&
+                              bidRowHoveredById.current <= index && (
+                                <div
+                                  className={cn('absolute left-0 top-0 w-full pointer-events-none z-1 bg-(--card-foreground)/5', {
+                                    'border-t border-dashed border-border': bidRowHoveredById.current === index,
+                                  })}
+                                  style={{
+                                    top: index * ROW_HEIGHT,
+                                    height: ROW_HEIGHT,
+                                  }}
+                                />
+                              )}
+
+                            <OrderBookRow
+                              price={bid.price}
+                              size={bid.size}
+                              index={index}
+                              orderType={EOrderTypes.bid}
+                              handleHover={handleHover}
+                              handleLeave={handleLeave}
+                              isRounding={popoverFields.rounding}
+                              maxSize={maxBidSize}
+                              ref={(el) => {
+                                if (el) rowBidRefs.current.set(bid.price, el);
+                                else rowBidRefs.current.delete(bid.price);
                               }}
                             />
-                          ) : null}
-                          <OrderBookRow
-                            price={price}
-                            size={size}
-                            handleHover={handleHover}
-                            handleLeave={handleLeave}
-                            orderType={EOrderTypes.ask}
-                            ref={(el) => {
-                              if (el) rowAskRefs.current.set(price, el);
-                              else rowAskRefs.current.delete(price);
-                            }}
-                            isRounding={popoverFields.rounding}
-                            maxSize={maxAskSize}
-                            index={index}
-                          />
-                        </Fragment>
-                      );
-                    })}
+                          </Fragment>
+                        );
+                      })}
+
+                    {/* SKELETON ROWS (FILL GAP / LOADING / EXPAND) */}
+                    {Array.from(
+                      {
+                        length: isOrderBookBidsLoading ? visibleRows : Math.max(visibleRows - bidsPriceStepOrdered.length, 0),
+                      },
+                      (_, i) => {
+                        const index = isOrderBookBidsLoading ? i : bidsPriceStepOrdered.length + i;
+                        return <OrderbookSkeletonRow key={`bid-skeleton-${index}`} index={index} />;
+                      },
+                    )}
                   </div>
                 </div>
               )}
+
               {isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
                 <div
                   className="absolute left-full ml-2 z-50"

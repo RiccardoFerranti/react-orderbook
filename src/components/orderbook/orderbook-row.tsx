@@ -1,7 +1,7 @@
 import { forwardRef, memo } from 'react';
 
 import { EOrderTypes, type TOrderType } from './types';
-import { ROW_HEIGHT } from './orderbook';
+import { ROW_HEIGHT } from './consts';
 
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/format-number';
@@ -34,10 +34,7 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
           top: index * ROW_HEIGHT,
           height: ROW_HEIGHT,
         }}
-        className={cn(
-          `absolute left-0 w-full ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5 
-          *:text-sm`,
-        )}
+        className="absolute left-0 w-full cursor-pointer py-0.5"
         onPointerEnter={() => handleHover(price, orderType, index)}
         onPointerLeave={handleLeave}
       >
@@ -49,10 +46,12 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
             width: `${((size * price) / safeMaxSize) * 100}%`,
           }}
         />
-        <div className="relative flex w-full">
-          <span className="flex-1 text-start">{displayBaseFormatted}</span>
-          <span className="flex-1 text-end">{displayQuoteFormatted}</span>
-          <span className="flex-1 text-end">{displayAvgPriceFormatted}</span>
+        <div className="relative flex w-full *:text-sm">
+          <span className={cn(`flex-1 text-start ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'}`)}>
+            {displayBaseFormatted}
+          </span>
+          <span className="flex-1 text-end text-muted-foreground">{displayQuoteFormatted}</span>
+          <span className="flex-1 text-end text-muted-foreground">{displayAvgPriceFormatted}</span>
         </div>
       </div>
     );

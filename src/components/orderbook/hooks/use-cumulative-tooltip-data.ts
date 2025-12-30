@@ -64,7 +64,7 @@ const useCumulativeTooltipData = (orders: IOrder[], sizeDecimals: number, tickDe
       ordersMapCumulative.set(row.price, {
         base: baseInt,
         quote: quoteInt,
-        avgPrice: baseInt === 0n ? 0n : quoteInt / baseInt,
+        avgPrice: baseInt === BigInt(0) ? BigInt(0) : quoteInt / baseInt,
       });
     }
 
