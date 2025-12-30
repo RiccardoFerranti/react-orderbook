@@ -1,0 +1,26 @@
+const handleHover = useCallback(
+  (price: number, orderType: TOrderType, index: number) => {
+    // cancel pending close
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    isHoveringRowRef.current = true;
+
+    // store hovered price (for range highlight)
+    if (orderType === EOrderTypes.bid) {
+      rowBuyHovered.current = price;
+    } else {
+      rowSellHovered.current = price;
+    }
+
+    // store hovered index (for tooltip positioning)
+    hoveredIndexRef.current = index;
+
+    // tooltip content
+    setHoverTooltipContent({ price, orderType });
+    setIsTooltipOpen(true);
+  },
+  [],
+);

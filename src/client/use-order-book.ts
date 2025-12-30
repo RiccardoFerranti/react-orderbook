@@ -60,7 +60,6 @@ const mergeValues = (prevValues: IOrder[], newValues: IOrder[]): IOrder[] => {
 export function useOrderBook(pair = EPairs.btcusdc, throttle = 500) {
   const wsRef = useRef<WebSocket | null>(null);
   const lastUpdateRef = useRef(0); // timestamp of last update
-  const isUpdatingRef = useRef(false);
 
   const [orderBook, setOrderBook] = useState<IOrderBook>({
     bids: [],
@@ -79,9 +78,6 @@ export function useOrderBook(pair = EPairs.btcusdc, throttle = 500) {
 
       lastUpdateRef.current = now;
 
-      // Start of update
-      isUpdatingRef.current = true;
-
       const data = JSON.parse(event.data);
 
       // Binance sends bids & asks as [price, size] strings
@@ -99,11 +95,6 @@ export function useOrderBook(pair = EPairs.btcusdc, throttle = 500) {
         bids: mergeValues(prev.bids, bids),
         asks: mergeValues(prev.asks, asks),
       }));
-
-      // Release the lock in the next animation frame
-      requestAnimationFrame(() => {
-        isUpdatingRef.current = false;
-      });
     };
 
     ws.onerror = (err) => {
@@ -115,5 +106,5 @@ export function useOrderBook(pair = EPairs.btcusdc, throttle = 500) {
     };
   }, [pair]);
 
-  return { orderBook, isUpdatingRef };
+  return orderBook;
 }

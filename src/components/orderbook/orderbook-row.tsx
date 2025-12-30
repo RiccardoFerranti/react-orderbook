@@ -1,6 +1,7 @@
 import { forwardRef, memo } from 'react';
 
 import { EOrderTypes, type TOrderType } from './types';
+import { ROW_HEIGHT } from './orderbook';
 
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/format-number';
@@ -9,16 +10,17 @@ import formatNumberTruncate from '@/utils/format-number-truncate';
 interface IOrderBookRowProps {
   price: number;
   size: number;
-  handleHover: (price: number, orderType: TOrderType) => void;
+  handleHover: (price: number, orderType: TOrderType, index: number) => void;
   handleLeave: () => void;
   orderType: TOrderType;
   rowHovered: number | null;
   isRounding: boolean;
   maxSize: number;
+  index: number;
 }
 
 const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
-  ({ price, size, handleHover, handleLeave, rowHovered, orderType, isRounding, maxSize }, ref) => {
+  ({ price, size, handleHover, handleLeave, rowHovered, orderType, isRounding, maxSize, index }, ref) => {
     const displayBaseFormatted = formatNumber(price, 2);
     const displayQuoteFormatted = formatNumber(size, 5);
     const safeMaxSize = maxSize || 1;
@@ -29,34 +31,47 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
       <div
         key={price}
         ref={ref}
+        style={{
+          top: index * ROW_HEIGHT,
+          height: ROW_HEIGHT,
+        }}
         className={cn(
-          `flex ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5 relative *:text-sm`,
-          {
-            'after:pointer-events-none after:content-[""] after:absolute after:left-0 after:w-full':
-              (rowHovered ?? 0) >= price || (rowHovered ?? 0) === price,
+          `absolute left-0 w-full ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5 *:text-sm`,
+          // {
+          //   'after:pointer-events-none after:content-[""] after:absolute after:left-0 after:w-full': (rowHovered ?? 0) >= price,
 
-            'after:h-full after:bg-(--card-foreground)/5': (rowHovered ?? 0) >= price,
+          //   'after:h-full after:bg-(--card-foreground)/5': (rowHovered ?? 0) >= price,
 
-            'after:border-dotted after:border-border': (rowHovered ?? 0) === price,
+          //   'after:border-dotted after:border-border': (rowHovered ?? 0) === price,
 
-            'after:top-0 after:border-t': orderType === EOrderTypes.bid && rowHovered === price,
+          //   'after:top-0 after:border-t': orderType === EOrderTypes.bid && rowHovered === price,
 
-            'after:top-0': orderType === EOrderTypes.bid && (rowHovered ?? 0) >= price,
+          //   'after:top-0': orderType === EOrderTypes.bid && (rowHovered ?? 0) >= price,
 
-            'after:bottom-0 after:border-b': orderType === EOrderTypes.ask && rowHovered === price,
+          //   'after:bottom-0 after:border-b': orderType === EOrderTypes.ask && rowHovered === price,
 
-            'after:bottom-0': orderType === EOrderTypes.ask && (rowHovered ?? 0) >= price,
-          },
+          //   'after:bottom-0': orderType === EOrderTypes.ask && (rowHovered ?? 0) >= price,
+          // },
         )}
-        onPointerEnter={() => handleHover(price, orderType)}
+        onPointerEnter={() => handleHover(price, orderType, index)}
         onPointerLeave={handleLeave}
       >
         <div
-          className={cn(`absolute right-0 top-0 h-full ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`)}
+          className={cn(
+            `absolute right-0 top-0 h-full z-0 ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`,
+          )}
           style={{
             width: `${((size * price) / safeMaxSize) * 100}%`,
           }}
         />
+        {(rowHovered ?? 0) === price ? (
+          <div
+            className={cn(`absolute right-0 top-0 h-full z-0 pointer-events-none left-0 w-full border-dotted border-border`, {
+              'top-0 border-t': orderType === EOrderTypes.bid && rowHovered === price,
+              'bottom-0 border-b': orderType === EOrderTypes.ask && rowHovered === price,
+            })}
+          />
+        ) : null}
 
         <div className="relative flex w-full">
           <span className="flex-1 text-start">{displayBaseFormatted}</span>

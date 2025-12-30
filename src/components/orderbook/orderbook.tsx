@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { TooltipProvider } from '../ui/tooltip';
 import OrderbookRowTooltip from './orderbook-row-tooltip';
@@ -14,6 +14,7 @@ import useCumulativeTooltipData from './hooks/use-cumulative-tooltip-data';
 import useOrderBookTooltip from './hooks/use-orderbook-tooltip';
 import OrderbookBidAskPercentage from './orderbook-bid-ask-percentage';
 import { useBidAskPercentage } from './hooks/use-bid-ask-percentage';
+import { TOOLTIP_HEIGHT, TOOLTIP_WIDTH } from './consts';
 
 import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
@@ -41,6 +42,8 @@ interface IOrderBookProps {
   pair: any;
 }
 
+export const ROW_HEIGHT = 25; // px (must match CSS)
+
 export default function OrderBook(props: IOrderBookProps) {
   const { pair } = props;
 
@@ -48,10 +51,11 @@ export default function OrderBook(props: IOrderBookProps) {
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
   const [priceStep, setPriceStep] = useState('0.01');
 
-  const {
-    orderBook: { bids, asks },
-    isUpdatingRef,
-  } = useOrderBook(pair);
+  const tooltipDataRef = useRef(null);
+  const bidContainerRef = useRef<HTMLDivElement | null>(null);
+  const askContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const { bids, asks } = useOrderBook(pair);
   // const { bids, asks } = mockOrderBookData;
 
   const { data } = useExchangeInfo(pair);
@@ -91,9 +95,8 @@ export default function OrderBook(props: IOrderBookProps) {
   const { bidPercentage, askPercentage } = useBidAskPercentage(bids, asks);
 
   const {
-    isTooltipOpen,
     hoverTooltipContent,
-    hoverRect,
+    isTooltipOpen,
     containerRef,
     rowBidRefs,
     rowAskRefs,
@@ -103,13 +106,17 @@ export default function OrderBook(props: IOrderBookProps) {
     handleLeave,
     handleTooltipEnter,
     handleTooltipLeave,
+    hoveredIndexRef,
   } = useOrderBookTooltip();
 
   const tooltipData = useMemo(() => {
     if (!hoverTooltipContent) return { base: 0, quote: 0, avgPrice: 0 };
     const { price, orderType } = hoverTooltipContent;
     const data = orderType === EOrderTypes.bid ? cumulativeBidData : cumulativeAskData;
-    return data.get(price);
+    const tooltipPriceData = data.get(price);
+    if (tooltipPriceData) tooltipDataRef.current = tooltipPriceData;
+    if (!tooltipPriceData) return tooltipDataRef.current;
+    return tooltipPriceData;
   }, [cumulativeBidData, cumulativeAskData, hoverTooltipContent]);
 
   const bestBid = bids[0]?.price ?? 0;
@@ -127,7 +134,36 @@ export default function OrderBook(props: IOrderBookProps) {
     return Math.max(...asks.slice(0, 20).map((r) => r.size * r.price));
   }, [bids]);
 
-  // console.log('price', price);
+  const tooltipCoodinates = useMemo(() => {
+    const rowNode =
+      hoverTooltipContent?.orderType === EOrderTypes.bid
+        ? hoverTooltipContent && rowBidRefs.current.get(hoverTooltipContent.price)
+        : hoverTooltipContent && rowAskRefs.current.get(hoverTooltipContent.price);
+
+    let tooltipTop;
+    let tooltipLeft;
+
+    if (rowNode && containerRef.current) {
+      const rowRect = rowNode.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
+
+      // row position relative to container
+      const topRelativeToContainer = rowRect.top - containerRect.top;
+
+      // center tooltip vertically on row
+      tooltipTop = topRelativeToContainer + rowRect.height / 2 - TOOLTIP_HEIGHT / 2;
+
+      // tooltip left/right
+      // tooltipLeft =
+      //   hoverTooltipContent && hoverTooltipContent.orderType === EOrderTypes.bid
+      //     ? rowRect.right - containerRect.left + 8
+      //     : rowRect.left - containerRect.left - TOOLTIP_WIDTH - 8;
+      tooltipLeft = rowRect.right - containerRect.left + 8;
+    }
+
+    return { tooltipTop, tooltipLeft };
+  }, [hoverTooltipContent]);
+
   return (
     <TooltipProvider>
       <div ref={containerRef} className="relative w-full max-w-md">
@@ -139,7 +175,7 @@ export default function OrderBook(props: IOrderBookProps) {
             </div>
             <Separator className="bg-border/80" />
             <CardAction className="p-0 m-0 flex justify-between w-full">
-              <div className="flex gap-2 *:p-0! *:cursor-pointer *:bg-transparent! *:hover:bg-transparen">
+              <div className="flex gap-2 *:p-0! *:cursor-pointer *:bg-transparent *:hover:bg-transparent">
                 <Button onClick={() => handleSetView('default')}>
                   <DefaultBuySellIcon />
                 </Button>
@@ -155,7 +191,7 @@ export default function OrderBook(props: IOrderBookProps) {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <div className="flex flex-col gap-2">
-              <div className="flex pe-3">
+              <div className="flex">
                 <div className="text-sm text-muted-foreground flex-1">Price (USDC)</div>
                 <div className="text-sm text-muted-foreground flex-1 text-end">Amount (BTC)</div>
                 <div className="text-sm text-muted-foreground flex-1 text-end">Total (USDC)</div>
@@ -163,14 +199,9 @@ export default function OrderBook(props: IOrderBookProps) {
 
               {/* Bids */}
               {(view.default || view.bid) && (
-                <div
-                  className={cn(
-                    'space-y-1npx pe-3 orderbook-radix-table-full -mb-2 overflow-hidden',
-                    view.bid ? 'min-h-120 h-full' : 'h-60',
-                  )}
-                >
-                  <div className="flex flex-col justify-end h-full">
-                    {bidsPriceStepOrdered.map(({ price, size }) => {
+                <div className={cn('space-y-1npx orderbook-radix-table-full -mb-2')}>
+                  <div className="relative" style={{ height: bidsPriceStepOrdered.length * ROW_HEIGHT }} ref={bidContainerRef}>
+                    {bidsPriceStepOrdered.map(({ price, size }, index) => {
                       return (
                         <OrderBookRow
                           key={price}
@@ -186,6 +217,7 @@ export default function OrderBook(props: IOrderBookProps) {
                           rowHovered={rowBuyHovered.current}
                           isRounding={popoverFields.rounding}
                           maxSize={maxBidSize}
+                          index={index}
                         />
                       );
                     })}
@@ -201,9 +233,9 @@ export default function OrderBook(props: IOrderBookProps) {
 
               {/* Asks */}
               {(view.default || view.ask) && (
-                <div className={cn('space-y-1npx pe-3 -mt-2 overflow-hidden', view.ask ? 'min-h-120 h-full' : 'h-60')}>
-                  <div className="flex flex-col justify-start h-full">
-                    {asksPriceStepOrdered.map(({ price, size }) => {
+                <div className={cn('space-y-1npx -mt-2')}>
+                  <div className="relative" style={{ height: asksPriceStepOrdered.length * ROW_HEIGHT }} ref={askContainerRef}>
+                    {asksPriceStepOrdered.map(({ price, size }, index) => {
                       return (
                         <OrderBookRow
                           key={price}
@@ -219,29 +251,33 @@ export default function OrderBook(props: IOrderBookProps) {
                           rowHovered={rowSellHovered.current}
                           isRounding={popoverFields.rounding}
                           maxSize={maxAskSize}
+                          index={index}
                         />
                       );
                     })}
                   </div>
                 </div>
               )}
+              {isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
+                <div
+                  className="absolute left-full ml-2 z-50"
+                  style={{
+                    top: tooltipCoodinates.tooltipTop,
+                    left: tooltipCoodinates.tooltipLeft,
+                    width: TOOLTIP_WIDTH,
+                    height: TOOLTIP_HEIGHT,
+                  }}
+                  onPointerEnter={handleTooltipEnter}
+                  onPointerLeave={handleTooltipLeave}
+                >
+                  <OrderbookRowTooltip tooltipData={tooltipData} sizeDecimals={sizeDecimals} tickDecimals={tickDecimals} />
+                </div>
+              )}
             </div>
+
             {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />}
           </CardContent>
         </Card>
-
-        {/* Single Tooltip */}
-        {hoverRect && hoverTooltipContent && (
-          <OrderbookRowTooltip
-            isTooltipOpen={isTooltipOpen}
-            hoverRect={hoverRect}
-            handleTooltipEnter={handleTooltipEnter}
-            handleTooltipLeave={handleTooltipLeave}
-            tooltipData={tooltipData}
-            sizeDecimals={sizeDecimals}
-            tickDecimals={tickDecimals}
-          />
-        )}
       </div>
     </TooltipProvider>
   );

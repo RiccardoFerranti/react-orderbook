@@ -56,7 +56,6 @@ const useOrderBookTooltip = () => {
   const rowBidRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const rowAskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const rafRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // It tracks when tooltip is hovered
@@ -69,47 +68,30 @@ const useOrderBookTooltip = () => {
   const rowBuyHovered = useRef<number | null>(null);
   const rowSellHovered = useRef<number | null>(null);
 
-  const handleHover = useCallback((price: number, orderType: TOrderType) => {
-    // It cancels pending close
+  const hoveredIndexRef = useRef<number | null>(null);
+
+  const handleHover = useCallback((price: number, orderType: TOrderType, index: number) => {
+    // cancel pending close
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
 
-    // It sets that we currently hovering a row
     isHoveringRowRef.current = true;
 
+    // store hovered price (for range highlight)
     if (orderType === EOrderTypes.bid) {
       rowBuyHovered.current = price;
     } else {
       rowSellHovered.current = price;
     }
 
-    // It deletes the previous animation when a new row is hovered
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    // store hovered index (for tooltip positioning)
+    hoveredIndexRef.current = index;
 
-    // It stores the animation reference
-    rafRef.current = requestAnimationFrame(() => {
-      // It gets from the rows map the current row hovered
-      const node = orderType === EOrderTypes.bid ? rowBidRefs.current.get(price) : rowAskRefs.current.get(price);
-
-      if (!node || !containerRef.current) return;
-
-      const nodeRect = node.getBoundingClientRect();
-      const containerRect = containerRef.current.getBoundingClientRect();
-
-      const relativeNodeRect = new DOMRect(
-        nodeRect.left - containerRect.left,
-        nodeRect.top - containerRect.top,
-        nodeRect.width,
-        nodeRect.height,
-      );
-
-      // It sets the row position relative to its wrapper
-      setHoverRect(relativeNodeRect);
-      setHoverTooltipContent({ price, orderType });
-      setIsTooltipOpen(true);
-    });
+    // tooltip content
+    setHoverTooltipContent({ price, orderType });
+    setIsTooltipOpen(true);
   }, []);
 
   const handleLeave = useCallback(() => {
@@ -117,14 +99,13 @@ const useOrderBookTooltip = () => {
     rowBuyHovered.current = null;
     rowSellHovered.current = null;
 
-    // The delay is used to avoid to close the tooltip when we pass from one row to another one
     closeTimeoutRef.current = setTimeout(() => {
       if (!isHoveringRowRef.current && !isHoveringTooltipRef.current) {
         setIsTooltipOpen(false);
         setHoverTooltipContent(null);
-        setHoverRect(null);
+        hoveredIndexRef.current = null;
       }
-    }, 80); // 50–120ms is a good compromise
+    }, 80);
   }, []);
 
   const handleTooltipEnter = useCallback(() => {
@@ -160,6 +141,7 @@ const useOrderBookTooltip = () => {
     hoverTooltipContent,
     hoverRect,
     containerRef,
+    hoveredIndexRef,
     rowBidRefs,
     rowAskRefs,
     rowBuyHovered,
