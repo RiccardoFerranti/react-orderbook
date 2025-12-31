@@ -16,7 +16,7 @@ const usePriceStepOrdered = (
 ) => {
   return useMemo(() => {
     if (defaultView && priceStep === '0.01') {
-      return !isBid ? orders.slice(0, 10) : orders.slice(10, orders.length);
+      return orders.sort((a, b) => b.price - a.price);
     }
 
     const grouped = orders.reduce(
@@ -38,11 +38,7 @@ const usePriceStepOrdered = (
     );
 
     // Convert grouped object to array and sort:
-    // - bids → descending
-    // - asks → ascending
-    const sorted = Object.values(grouped).sort((a, b) => (isBid ? b.price - a.price : a.price - b.price));
-
-    return sorted;
+    return Object.values(grouped).sort((a, b) => b.price - a.price);
   }, [orders, priceStep, isBid]);
 };
 

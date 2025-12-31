@@ -1,4 +1,3 @@
-import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import type { ITooltipContent } from './types';
 
 import { formatNumber } from '@/utils/format-number';

@@ -102,7 +102,7 @@ const useOrderBookTooltip = () => {
     askRowHoveredById.current = null;
 
     closeTimeoutRef.current = setTimeout(() => {
-      if (!isHoveringBidRowRef.current && isHoveringAskRowRef.current && !isHoveringTooltipRef.current) {
+      if (!isHoveringBidRowRef.current && !isHoveringAskRowRef.current && !isHoveringTooltipRef.current) {
         setIsTooltipOpen(false);
         setHoverTooltipContent(null);
         hoveredIndexRef.current = null;
