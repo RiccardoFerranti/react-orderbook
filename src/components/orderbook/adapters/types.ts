@@ -27,6 +27,6 @@ export interface IOrderBookAdapter {
   id: string;
   version: string;
   capabilities: IOrderBookAdapterCapabilities;
-  connectOrderBook: (pair: EPairs, onData: (data: IOrderBook) => void) => TOrderBookUnsubscribe;
+  connectOrderBook: (pair: EPairs, onData: (data: IOrderBook) => void, onDisconnect: () => void) => TOrderBookUnsubscribe;
   connectTrades: (pair: EPairs, onTrade: (data: IOrderBookTradeRaw) => void) => TOrderBookUnsubscribe;
 }

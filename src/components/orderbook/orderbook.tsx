@@ -284,10 +284,7 @@ export default function OrderBook(props: IOrderBookProps) {
 
             <>
               <Separator className="bg-border/80" />
-              {capabilities.trades && lastTrade && (
-                <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTrade={lastTrade} />
-              )}
-
+              {capabilities.trades && <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTrade={lastTrade} />}
               <Separator className="bg-border/80" />
             </>
 

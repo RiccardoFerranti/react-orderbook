@@ -32,18 +32,39 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
     trades: true,
   },
 
-  connectOrderBook(pair, onData) {
+  connectOrderBook(pair, onData, onDisconnect) {
     const wsUrl = `${BINANCE_WS_URL}${pair}@depth${BINANCE_DEPTH_LEVEL}@${BINANCE_UPDATE_MS}ms`;
     const ws = new WebSocket(wsUrl);
 
-    let lastUpdate = 0;
+    // let lastUpdate = 0;
     let current: IOrderBook = { bids: [], asks: [] };
 
-    ws.onmessage = (event) => {
-      const now = Date.now();
-      if (now - lastUpdate < 500) return;
-      lastUpdate = now;
+    // ws.onmessage = (event) => {
+    //   const now = Date.now();
+    //   if (now - lastUpdate < 500) return;
+    //   lastUpdate = now;
 
+    //   const data = JSON.parse(event.data);
+
+    //   const bids: IOrder[] = data.bids.map(([price, size]: [string, string]) => ({
+    //     price: Number(price),
+    //     size: Number(size),
+    //   }));
+
+    //   const asks: IOrder[] = data.asks.map(([price, size]: [string, string]) => ({
+    //     price: Number(price),
+    //     size: Number(size),
+    //   }));
+
+    //   current = {
+    //     bids: mergeValues(current.bids, bids),
+    //     asks: mergeValues(current.asks, asks),
+    //   };
+
+    //   onData(current);
+    // };
+
+    ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
       const bids: IOrder[] = data.bids.map(([price, size]: [string, string]) => ({
@@ -61,11 +82,17 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
         asks: mergeValues(current.asks, asks),
       };
 
-      onData(current);
+      onData(current); // the hook will throttle updates
     };
 
-    ws.onerror = (err) => {
-      console.error('Binance WS error', err);
+    ws.onerror = () => {
+      console.warn('[Binance WS] error');
+      () => onDisconnect();
+    };
+
+    ws.onclose = (event: CloseEvent) => {
+      console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
+      onDisconnect();
     };
 
     return () => ws.close();
