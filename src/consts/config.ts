@@ -1,5 +1,6 @@
 export const BINANCE_WS_URL = process.env.NEXT_PUBLIC_BINANCE_WS_URL;
 export const BINANCE_EXCHANGE_INFO_URL = process.env.NEXT_PUBLIC_BINANCE_EXCHANGE_INFO_URL;
+export const ENV = process.env.NEXT_PUBLIC_ENV;
 
 export const BINANCE_DEPTH_LEVEL = process.env.NEXT_BINANCE_DEPTH_LEVEL ?? 20;
 export const BINANCE_UPDATE_MS = process.env.NEXT_BINANCE_UPDATE_MS ?? 100;

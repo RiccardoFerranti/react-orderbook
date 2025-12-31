@@ -2,7 +2,7 @@ import type { IOrder, IOrderBook, IOrderBookAdapter, IOrderBookTradeRaw } from '
 import mergeValues from './merge-values';
 import { EOrderTypes } from '../../types';
 
-import { BINANCE_DEPTH_LEVEL, BINANCE_UPDATE_MS, BINANCE_WS_URL } from '@/consts/config';
+import { BINANCE_DEPTH_LEVEL, BINANCE_UPDATE_MS, BINANCE_WS_URL, ENV } from '@/consts/config';
 
 /**
  * React hook to provide live Binance order book for a trading pair, with throttled updates.
@@ -39,31 +39,6 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
     // let lastUpdate = 0;
     let current: IOrderBook = { bids: [], asks: [] };
 
-    // ws.onmessage = (event) => {
-    //   const now = Date.now();
-    //   if (now - lastUpdate < 500) return;
-    //   lastUpdate = now;
-
-    //   const data = JSON.parse(event.data);
-
-    //   const bids: IOrder[] = data.bids.map(([price, size]: [string, string]) => ({
-    //     price: Number(price),
-    //     size: Number(size),
-    //   }));
-
-    //   const asks: IOrder[] = data.asks.map(([price, size]: [string, string]) => ({
-    //     price: Number(price),
-    //     size: Number(size),
-    //   }));
-
-    //   current = {
-    //     bids: mergeValues(current.bids, bids),
-    //     asks: mergeValues(current.asks, asks),
-    //   };
-
-    //   onData(current);
-    // };
-
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
@@ -85,13 +60,15 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
       onData(current); // the hook will throttle updates
     };
 
-    ws.onerror = () => {
-      console.warn('[Binance WS] error');
+    ws.onerror = (err) => {
+      if (ENV === 'development') console.warn('[Binance WS] error', err);
       () => onDisconnect();
     };
 
     ws.onclose = (event: CloseEvent) => {
-      console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
+      if (ENV === 'development') {
+        console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
+      }
       onDisconnect();
     };
 
@@ -115,7 +92,7 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
     };
 
     ws.onerror = (err) => {
-      console.error('Binance WS error', err);
+      if (ENV === 'development') console.warn('[Binance WS] error', err);
     };
 
     return () => ws.close();
