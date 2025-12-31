@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface IOrderbookLastTradeProps {
   spread: string;
   spreadPct: string;
-  lastTrade: IOrderBookTradeRaw;
+  lastTrade: IOrderBookTradeRaw | null;
 }
 
 export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {

@@ -11,7 +11,9 @@
  * @param {string} text - The string representing the decimal portion (e.g., '00100')
  * @returns {number | undefined} The count of decimal digits up to last non-zero, or undefined if all zeros
  */
-export const extractDecimals = (text: string) => {
+export const extractDecimals = (text: string | undefined): number => {
+  if (!text) return 0;
+
   const decimalPart = text?.split('.')[1];
 
   if (!decimalPart) return 0;

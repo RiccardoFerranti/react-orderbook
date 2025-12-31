@@ -20,7 +20,7 @@ import {
   TOOLTIP_HEIGHT,
   TOOLTIP_WIDTH,
 } from '@/components/orderbook/consts';
-import type { IOrderBook } from '@/components/orderbook/adapters/types';
+import type { IOrderBook, IOrderBookAdapterCapabilities, IOrderBookTradeRaw } from '@/components/orderbook/adapters/types';
 import useOrderbookMaxBidAskSize from '@/components/orderbook/hooks/use-orderbook-max-bid-ask-size';
 import useOrderBookPriceStepOrdered from '@/components/orderbook/hooks/use-orderbook-price-step-ordered';
 import useOrderBookTooltip from '@/components/orderbook/hooks/use-orderbook-tooltip';
@@ -36,9 +36,9 @@ import DefaultBuySellIcon from '@/assets/buy-sell-icon';
 import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
 import { cn } from '@/lib/utils';
-import useExchangeInfo from '@/client/use-exchange-info';
 import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export interface IPopoverFields {
   rounding: boolean;
@@ -51,11 +51,14 @@ export const popoverFieldsInitialState = {
 interface IOrderBookProps extends IOrderBook {
   pair: EPairs;
   isOrdersLoading: boolean;
-  lastTrade: any;
+  lastTrade: IOrderBookTradeRaw | null;
+  stepSize?: string;
+  tickSize?: string;
+  capabilities: IOrderBookAdapterCapabilities;
 }
 
 export default function OrderBook(props: IOrderBookProps) {
-  const { pair, bids, asks, isOrdersLoading, lastTrade } = props;
+  const { pair, bids, asks, isOrdersLoading, lastTrade, stepSize, tickSize, capabilities } = props;
 
   const [view, setView] = useState({ default: true, bid: false, ask: false });
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
@@ -65,11 +68,16 @@ export default function OrderBook(props: IOrderBookProps) {
   const bidContainerRef = useRef<HTMLDivElement | null>(null);
   const askContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const { data } = useExchangeInfo(pair);
+  const sizeDecimals = extractDecimals(stepSize);
+  const tickDecimals = extractDecimals(tickSize);
 
-  const sizeDecimals = extractDecimals(data?.stepSize);
-  const tickDecimals = extractDecimals(data?.tickSize);
-
+  const isMobile = useIsMobile();
+  /**
+   * Updates a specific field in the popover state.
+   *
+   * @param {boolean} value - The new value to set for the field.
+   * @param {keyof typeof popoverFieldsInitialState} field - The field key to update (e.g., 'rounding').
+   */
   const handleSetPopoverFields = useCallback((value: boolean, field: keyof typeof popoverFieldsInitialState) => {
     setPopoverFields((prev) => ({
       ...prev,
@@ -77,10 +85,21 @@ export default function OrderBook(props: IOrderBookProps) {
     }));
   }, []);
 
+  /**
+   * Updates the price step state.
+   *
+   * @param {string} value - The new price step value to set.
+   */
   const handleSetPriceStep = useCallback((value: string) => {
     setPriceStep(value);
   }, []);
 
+  /**
+   * Updates the view state to set the given view as active.
+   * All other views will be set to inactive (false). Intended for toggling between order book views.
+   *
+   * @param {string} view - The name of the view to activate ("default", "bid", or "ask").
+   */
   const handleSetView = useCallback((view: string) => {
     setView((prev) =>
       Object.keys(prev).reduce(
@@ -265,7 +284,10 @@ export default function OrderBook(props: IOrderBookProps) {
 
             <>
               <Separator className="bg-border/80" />
-              <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTrade={lastTrade} />
+              {capabilities.trades && lastTrade && (
+                <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTrade={lastTrade} />
+              )}
+
               <Separator className="bg-border/80" />
             </>
 
@@ -326,7 +348,7 @@ export default function OrderBook(props: IOrderBookProps) {
                 </div>
               </div>
             )}
-            {isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
+            {!isMobile && isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
               <div
                 className="absolute left-full ml-2 z-50"
                 style={{

@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 
-import { EOrderTypes, type TOrderType } from '../types';
+import { EOrderTypes, type TOrderType } from '@/components/orderbook/types';
+import type { IOrder } from '@/components/orderbook/adapters/types';
 
-import type { IOrder } from '@/client/use-order-book';
 /**
  * A custom hook that calculates cumulative tooltip data for the order book rows.
  *
