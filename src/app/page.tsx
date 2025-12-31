@@ -20,9 +20,9 @@ export default function Home() {
   const {
     orderBook: { bids, asks },
     isLoading,
-  } = useOrderBook(pair, binanceOrderBookAdapter);
+  } = useOrderBook({ pair, adapter: binanceOrderBookAdapter });
 
-  const lastTrade = useOrderBookTrades(pair, binanceOrderBookAdapter);
+  const lastTrade = useOrderBookTrades({ pair, adapter: binanceOrderBookAdapter });
 
   const { data } = useExchangeInfo(pair);
 

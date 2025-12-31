@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { TConnectionStatus } from './types';
+
 import type { IOrderBook, IOrderBookAdapter, TOrderBookUnsubscribe } from '@/components/orderbook/adapters/types';
 import type { EPairs } from '@/types';
 
-export type TConnectionStatus = 'connecting' | 'connected' | 'disconnected';
-
-export interface IUseOrderBook {
+interface IUseOrderBookReturn {
   orderBook: IOrderBook;
   isLoading: boolean;
   capabilities: IOrderBookAdapter['capabilities'];
   status: TConnectionStatus;
+}
+
+interface IUseOrderBook {
+  pair: EPairs;
+  adapter: IOrderBookAdapter;
+  throttle?: number;
+  maxRetries?: number;
+  baseRetryDelay?: number;
 }
 
 /**
@@ -25,13 +33,13 @@ export interface IUseOrderBook {
  * @param {number} [baseRetryDelay=2000] - Base delay in ms for exponential backoff when retrying a failed connection.
  * @returns {IUseOrderBook} An object with the latest order book, loading status, connection capabilities, and connection status.
  */
-export function useOrderBook(
-  pair: EPairs,
-  adapter: IOrderBookAdapter,
+export function useOrderBook({
+  pair,
+  adapter,
   throttle = 500,
   maxRetries = 5,
-  baseRetryDelay = 2000,
-): IUseOrderBook {
+  baseRetryDelay = 500,
+}: IUseOrderBook): IUseOrderBookReturn {
   const [orderBook, setOrderBook] = useState<IOrderBook>({ bids: [], asks: [] });
   const [status, setStatus] = useState<TConnectionStatus>('connecting');
 
@@ -49,9 +57,9 @@ export function useOrderBook(
       return;
     }
 
-    // Applied wxponential backoff to reduces pressure on the WebSocket server, to prevent flooding with retries when
+    // Applied exponential backoff to reduces pressure on the WebSocket server, to prevent flooding with retries when
     // the connection is unstable and to make the retry behavior more resilient in poor network conditions.
-    const delay = baseRetryDelay * 2 ** retryCountRef.current;
+    const delay = baseRetryDelay * (retryCountRef.current + 1);
     retryCountRef.current += 1;
     setStatus('connecting');
 
@@ -107,6 +115,7 @@ export function useOrderBook(
         connect();
       }
     };
+
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
   }, [connect, status]);
@@ -125,6 +134,7 @@ export function useOrderBook(
         }
       }
     };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [connect, status]);

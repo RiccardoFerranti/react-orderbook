@@ -57,25 +57,25 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
         asks: mergeValues(current.asks, asks),
       };
 
-      onData(current); // the hook will throttle updates
+      onData?.(current); // the hook will throttle updates
     };
 
     ws.onerror = (err) => {
       if (ENV === 'development') console.warn('[Binance WS] error', err);
-      () => onDisconnect();
+      () => onDisconnect?.();
     };
 
     ws.onclose = (event: CloseEvent) => {
       if (ENV === 'development') {
         console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
       }
-      onDisconnect();
+      onDisconnect?.();
     };
 
     return () => ws.close();
   },
 
-  connectTrades(pair, onTrade) {
+  connectTrades(pair, onTrade, onDisconnect) {
     const wsUrl = `${BINANCE_WS_URL}${pair.toLowerCase()}@trade`;
     const ws = new WebSocket(wsUrl);
 
@@ -88,11 +88,19 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
         orderType: data.m ? EOrderTypes.ask : EOrderTypes.bid,
       };
 
-      onTrade(trade);
+      onTrade?.(trade);
     };
 
     ws.onerror = (err) => {
       if (ENV === 'development') console.warn('[Binance WS] error', err);
+      () => onDisconnect?.();
+    };
+
+    ws.onclose = (event: CloseEvent) => {
+      if (ENV === 'development') {
+        console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
+      }
+      onDisconnect?.();
     };
 
     return () => ws.close();
