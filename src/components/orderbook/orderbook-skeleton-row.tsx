@@ -1,5 +1,5 @@
-import { Skeleton } from '../ui/skeleton';
-import { ROW_HEIGHT } from './consts';
+import { ROW_HEIGHT } from '@/components/orderbook/consts';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OrderbookSkeletonRow({ index }: { index: number }) {
   return (

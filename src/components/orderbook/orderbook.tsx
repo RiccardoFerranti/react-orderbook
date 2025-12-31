@@ -2,15 +2,15 @@
 
 import { Fragment, useCallback, useRef, useState } from 'react';
 
-import OrderbookRowTooltip from './orderbook-row-tooltip';
-import { extractDecimals } from './utils';
-import OrderbookPopover from './orderbook-popover';
-import OrderbookLastTrade from './orderbook-last-trade';
-import OrderbookStepPriceDropdown from './orderbook-step-price-dropdown';
-import type { ITooltipData } from './types';
-import { EOrderTypes } from './types';
-import OrderbookBidAskPercentage from './orderbook-bid-ask-percentage';
-import { useOrderBookBidAskPercentage } from './hooks/use-orderbook-bid-ask-percentage';
+import { useOrderBookBidAskPercentage } from '@/components/orderbook/hooks/use-orderbook-bid-ask-percentage';
+import OrderbookBidAskPercentage from '@/components/orderbook/orderbook-bid-ask-percentage';
+import { EOrderTypes } from '@/components/orderbook/types';
+import type { ITooltipData } from '@/components/orderbook/types';
+import OrderbookStepPriceDropdown from '@/components/orderbook/orderbook-step-price-dropdown';
+import OrderbookLastTrade from '@/components/orderbook/orderbook-last-trade';
+import OrderbookPopover from '@/components/orderbook/orderbook-popover';
+import { extractDecimals } from '@/components/orderbook/utils';
+import OrderbookRowTooltip from '@/components/orderbook/orderbook-row-tooltip';
 import {
   DEFAULT_PRICE_STEP,
   ORDERBOOK_LABELS,
@@ -19,15 +19,15 @@ import {
   ROWS_NUMBER_NOT_EXPANDED,
   TOOLTIP_HEIGHT,
   TOOLTIP_WIDTH,
-} from './consts';
-import OrderbookSkeletonRow from './orderbook-skeleton-row';
-import useOrderBookTooltipCoordinates from './hooks/use-orderbook-tooltip-coordinates';
-import useOrderBookTooltipData from './hooks/use-orderbook-tooltip-data';
-import useOrderBookCumulativeTooltipData from './hooks/use-orderbook-cumulative-tooltip-data';
-import useOrderBookTooltip from './hooks/use-orderbook-tooltip';
-import useOrderBookPriceStepOrdered from './hooks/use-orderbook-price-step-ordered';
-import useOrderbookMaxBidAskSize from './hooks/use-orderbook-max-bid-ask-size';
-
+} from '@/components/orderbook/consts';
+import type { IOrderBook } from '@/components/orderbook/adapters/types';
+import useOrderbookMaxBidAskSize from '@/components/orderbook/hooks/use-orderbook-max-bid-ask-size';
+import useOrderBookPriceStepOrdered from '@/components/orderbook/hooks/use-orderbook-price-step-ordered';
+import useOrderBookTooltip from '@/components/orderbook/hooks/use-orderbook-tooltip';
+import useOrderBookCumulativeTooltipData from '@/components/orderbook/hooks/use-orderbook-cumulative-tooltip-data';
+import useOrderBookTooltipData from '@/components/orderbook/hooks/use-orderbook-tooltip-data';
+import useOrderBookTooltipCoordinates from '@/components/orderbook/hooks/use-orderbook-tooltip-coordinates';
+import OrderbookSkeletonRow from '@/components/orderbook/orderbook-skeleton-row';
 import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,6 @@ import DefaultBuySellIcon from '@/assets/buy-sell-icon';
 import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
 import { cn } from '@/lib/utils';
-import type { IOrderBook } from '@/client/use-order-book';
 import useExchangeInfo from '@/client/use-exchange-info';
 import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
@@ -52,10 +51,11 @@ export const popoverFieldsInitialState = {
 interface IOrderBookProps extends IOrderBook {
   pair: EPairs;
   isOrdersLoading: boolean;
+  lastTrade: any;
 }
 
 export default function OrderBook(props: IOrderBookProps) {
-  const { pair, bids, asks, isOrdersLoading } = props;
+  const { pair, bids, asks, isOrdersLoading, lastTrade } = props;
 
   const [view, setView] = useState({ default: true, bid: false, ask: false });
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
@@ -265,7 +265,7 @@ export default function OrderBook(props: IOrderBookProps) {
 
             <>
               <Separator className="bg-border/80" />
-              <OrderbookLastTrade spread={spread} spreadPct={spreadPct} pair={pair} />
+              <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTrade={lastTrade} />
               <Separator className="bg-border/80" />
             </>
 

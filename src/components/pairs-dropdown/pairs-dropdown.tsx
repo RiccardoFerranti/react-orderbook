@@ -1,15 +1,15 @@
 import { ChevronDown } from 'lucide-react';
 
+import { PAIRS_DROPDOWN_OPTIONS } from './consts';
+
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
-import { PAIRS_DROPDOWN_OPTIONS } from './consts';
-
+} from '@/components/ui/dropdown-menu';
 import type { EPairs } from '@/types';
 
 interface IOrderbookPairsDropdownProps {

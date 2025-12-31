@@ -1,56 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { BINANCE_WS_URL } from '@/consts/config';
-import { EOrderTypes } from '@/components/orderbook/types';
-
-interface IUseOrderBookTrade {
-  value: number;
-  orderType: EOrderTypes.bid | EOrderTypes.ask;
-}
+import type { IOrderBookAdapter, IOrderBookTradeRaw } from '@/components/orderbook/adapters/types';
+import type { EPairs } from '@/types';
 
 /**
- * Hook for subscribing to the latest trade of a symbol on Binance order book, returns price and buy/sell.
+ * React hook to subscribe to live trades for a given trading pair using a specified order book adapter.
  *
- * @typedef {Object} IUseOrderBookTrade
- * @property {number} value - Last traded price
- * @property {EOrderTypes.bid | EOrderTypes.ask} orderType - Type of the last trade ("bid" for buy, "ask" for sell)
+ * This hook connects to the adapter's trade stream and returns the most recent trade received.
+ * Automatically unsubscribes when the pair or adapter changes.
  *
- * @param {string} symbol - Trading pair symbol (e.g., 'btcusdt')
- * @returns {IUseOrderBookTrade | null} - The latest trade price and order type, or null if not available
- *
- * @example
- * const trade = useOrderBookTrade('btcusdt');
- * if (trade) {
- *   console.log(trade.value, trade.orderType); // e.g. 26400, EOrderTypes.bid
- * }
+ * @param {EPairs} pair - The trading pair symbol (e.g., 'btcusdc', 'ethusdc').
+ * @param {IOrderBookAdapter} adapter - The order book adapter providing the trade subscription.
+ * @returns {IOrderBookTradeRaw | null} The most recent trade, or null if no trade has been received.
  */
-
-export function useOrderBookTrade(pair: string): IUseOrderBookTrade | null {
-  if (!pair) throw new Error('The pair is mandatory');
-
-  const [lastTradePrice, setLastTradePrice] = useState<IUseOrderBookTrade | null>(null);
-
-  const wsRef = useRef<WebSocket | null>(null);
+export function useOrderBookTrades(pair: EPairs, adapter: IOrderBookAdapter) {
+  const [lastTrade, setLastTrade] = useState<IOrderBookTradeRaw | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`${BINANCE_WS_URL}${pair.toLowerCase()}@trade`);
-    wsRef.current = ws;
+    if (!adapter.capabilities.trades || !adapter.connectTrades) return;
 
-    ws.onmessage = (event) => {
-      const trade = JSON.parse(event.data);
-      setLastTradePrice({
-        value: Number(trade.p),
-        // true → sell, false → buy
-        orderType: trade.m ? EOrderTypes.ask : EOrderTypes.bid,
-      });
-    };
+    const disconnect = adapter.connectTrades(pair, setLastTrade);
+    return () => disconnect();
+  }, [pair, adapter]);
 
-    ws.onerror = (err) => {
-      console.error('WebSocket error', err);
-    };
-
-    return () => ws.close();
-  }, [pair]);
-
-  return lastTradePrice;
+  return lastTrade;
 }

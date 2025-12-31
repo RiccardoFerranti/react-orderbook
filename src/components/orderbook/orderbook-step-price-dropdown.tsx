@@ -1,15 +1,14 @@
 import { ChevronDown } from 'lucide-react';
 
+import { STEP_PRICES } from '@/components/orderbook/consts';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
-import { STEP_PRICES } from './consts';
-
+} from '@/components/ui/dropdown-menu';
 import type { EPairs } from '@/types';
 
 interface IOrderbookDropdownProps {

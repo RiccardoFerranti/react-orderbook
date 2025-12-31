@@ -1,16 +1,7 @@
-export interface IOrder {
-  price: number;
-  size: number;
-}
-
-export interface IOrderBook {
-  bids: IOrder[];
-  asks: IOrder[];
-}
-
 import { useEffect, useState } from 'react';
 
-import type { IOrderBookAdapter } from '@/components/orderbook/adapters/types';
+import type { IOrderBook, IOrderBookAdapter } from '@/components/orderbook/adapters/types';
+import type { EPairs } from '@/types';
 
 /**
  * React hook to provide a live order book for a specified trading pair using the given adapter.
@@ -31,7 +22,7 @@ import type { IOrderBookAdapter } from '@/components/orderbook/adapters/types';
  * @example
  * const { orderBook, isOrderBookBidsLoading, isOrderBookAsksLoading } = useOrderBook('btcusdc', binanceOrderBookAdapter);
  */
-export function useOrderBook(pair: string, adapter: IOrderBookAdapter) {
+export function useOrderBook(pair: EPairs, adapter: IOrderBookAdapter) {
   const [orderBook, setOrderBook] = useState<IOrderBook>({
     bids: [],
     asks: [],
@@ -40,14 +31,14 @@ export function useOrderBook(pair: string, adapter: IOrderBookAdapter) {
   useEffect(() => {
     setOrderBook({ bids: [], asks: [] }); // reset on pair change
 
-    const disconnect = adapter.connect(pair, setOrderBook);
+    const disconnect = adapter.connectOrderBook(pair, setOrderBook);
 
-    return disconnect;
+    return () => disconnect();
   }, [pair, adapter]);
 
   return {
     orderBook,
-    isOrderBookBidsLoading: orderBook.bids.length === 0,
-    isOrderBookAsksLoading: orderBook.asks.length === 0,
+    isLoading: orderBook.bids.length === 0 || orderBook.asks.length === 0,
+    capabilities: adapter.capabilities,
   };
 }

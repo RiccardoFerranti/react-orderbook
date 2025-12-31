@@ -1,8 +1,7 @@
 import { forwardRef, memo } from 'react';
 
-import { EOrderTypes, type TOrderType } from './types';
-import { ROW_HEIGHT } from './consts';
-
+import { EOrderTypes, type TOrderType } from '@/components/orderbook/types';
+import { ROW_HEIGHT } from '@/components/orderbook/consts';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/format-number';
 import formatNumberTruncate from '@/utils/format-number-truncate';

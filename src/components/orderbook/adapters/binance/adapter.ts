@@ -1,8 +1,8 @@
-import type { IOrderBookAdapter } from '../types';
+import type { IOrder, IOrderBook, IOrderBookAdapter, IOrderBookTradeRaw } from '../types';
 import mergeValues from './merge-values';
+import { EOrderTypes } from '../../types';
 
 import { BINANCE_DEPTH_LEVEL, BINANCE_UPDATE_MS, BINANCE_WS_URL } from '@/consts/config';
-import type { IOrder, IOrderBook } from '@/client/use-order-book';
 
 /**
  * React hook to provide live Binance order book for a trading pair, with throttled updates.
@@ -24,7 +24,15 @@ import type { IOrder, IOrderBook } from '@/client/use-order-book';
  */
 
 export const binanceOrderBookAdapter: IOrderBookAdapter = {
-  connect(pair, onData) {
+  id: 'binance',
+  version: '1.0.0',
+
+  capabilities: {
+    depth: true,
+    trades: true,
+  },
+
+  connectOrderBook(pair, onData) {
     const wsUrl = `${BINANCE_WS_URL}${pair}@depth${BINANCE_DEPTH_LEVEL}@${BINANCE_UPDATE_MS}ms`;
     const ws = new WebSocket(wsUrl);
 
@@ -54,6 +62,29 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
       };
 
       onData(current);
+    };
+
+    ws.onerror = (err) => {
+      console.error('Binance WS error', err);
+    };
+
+    return () => ws.close();
+  },
+
+  connectTrades(pair, onTrade) {
+    const wsUrl = `${BINANCE_WS_URL}${pair.toLowerCase()}@trade`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      // Normalize to our internal format
+      const trade: IOrderBookTradeRaw = {
+        price: Number(data.p),
+        orderType: data.m ? EOrderTypes.ask : EOrderTypes.bid,
+      };
+
+      onTrade(trade);
     };
 
     ws.onerror = (err) => {

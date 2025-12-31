@@ -1,35 +1,31 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
-import { EOrderTypes } from './types';
-
-import { useOrderBookTrade } from '@/client/use-order-book-trade';
+import { EOrderTypes } from '@/components/orderbook/types';
+import type { IOrderBookTradeRaw } from '@/components/orderbook/adapters/types';
 import { formatNumber } from '@/utils/format-number';
-import type { EPairs } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface IOrderbookLastTradeProps {
   spread: string;
   spreadPct: string;
-  pair: EPairs;
+  lastTrade: IOrderBookTradeRaw;
 }
 
 export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
-  const { spread, spreadPct, pair } = props;
+  const { spread, spreadPct, lastTrade } = props;
 
-  const tradeData = useOrderBookTrade(pair);
-
-  const lastTrade = tradeData?.value ? formatNumber(tradeData?.value) : '--';
+  const lastTradePrice = lastTrade?.price ? formatNumber(lastTrade.price) : '--';
 
   return (
     <div className="flex flex-col items-center gap-0.5">
       <p
         className={cn(`text-lg font-medium text-foreground flex items-center gap-2`, {
-          'text-red-500': tradeData?.orderType === EOrderTypes.ask,
-          'text-green-500': tradeData?.orderType === EOrderTypes.bid,
+          'text-red-500': lastTrade?.orderType === EOrderTypes.ask,
+          'text-green-500': lastTrade?.orderType === EOrderTypes.bid,
         })}
       >
-        {lastTrade}
-        {tradeData?.orderType === EOrderTypes.ask ? <ArrowDown /> : <ArrowUp />}
+        {lastTradePrice}
+        {lastTrade?.orderType === EOrderTypes.ask ? <ArrowDown /> : <ArrowUp />}
       </p>
       <span className="text-xs text-muted-foreground">
         Spread {spread} ({spreadPct}%)

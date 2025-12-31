@@ -1,5 +1,4 @@
-import type { ITooltipData } from './types';
-
+import type { ITooltipData } from '@/components/orderbook/types';
 import { formatNumber } from '@/utils/format-number';
 
 interface IOrderbookRowTooltipProps {
