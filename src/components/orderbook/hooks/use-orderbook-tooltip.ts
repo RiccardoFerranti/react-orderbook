@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { TOrderType } from '../types';
+import type { IHoverTooltipContent, TOrderType } from '../types';
 import { EOrderTypes } from '../types';
 
 /**
@@ -44,10 +44,7 @@ import { EOrderTypes } from '../types';
 
 const useOrderBookTooltip = () => {
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const [hoverTooltipContent, setHoverTooltipContent] = useState<{
-    price: number;
-    orderType: TOrderType;
-  } | null>(null);
+  const [hoverTooltipContent, setHoverTooltipContent] = useState<IHoverTooltipContent | null>(null);
   const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);

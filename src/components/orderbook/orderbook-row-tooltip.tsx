@@ -1,9 +1,9 @@
-import type { ITooltipContent } from './types';
+import type { ITooltipData } from './types';
 
 import { formatNumber } from '@/utils/format-number';
 
 interface IOrderbookRowTooltipProps {
-  tooltipData: ITooltipContent;
+  tooltipData: ITooltipData;
   sizeDecimals: number;
   tickDecimals: number;
 }
@@ -13,6 +13,8 @@ export default function OrderbookRowTooltip({ tooltipData, sizeDecimals, tickDec
 
   const { avgPrice, base, quote } = tooltipData;
 
+  // Convert the raw BigInt-like base, quote, and avgPrice values—which are scaled up by the number of decimals for precision—
+  // back to floating point numbers for display, by dividing by 10**decimals. This ensures the values are human-readable.
   const displayBase = Number(base) / 10 ** sizeDecimals;
   const displayQuote = Number(quote) / 10 ** tickDecimals;
   const displayAvgPrice = Number(avgPrice) / 10 ** tickDecimals;

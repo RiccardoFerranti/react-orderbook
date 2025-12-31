@@ -1,6 +1,10 @@
 export type TOrderType = 'bid' | 'ask';
 
-export interface ITooltipContent {
+export interface IHoverTooltipContent {
+  price: number;
+  orderType: TOrderType;
+}
+export interface ITooltipData {
   base: number;
   quote: number;
   avgPrice: number;

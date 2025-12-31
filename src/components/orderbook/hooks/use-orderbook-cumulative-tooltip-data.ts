@@ -36,7 +36,18 @@ import type { IOrder } from '@/client/use-order-book';
  * @returns {Map<number, { base: bigint, quote: bigint, avgPrice: bigint }>} - Map from price to cumulative row data.
  */
 
-const useCumulativeTooltipData = (orders: IOrder[], sizeDecimals: number, tickDecimals: number, orderType: TOrderType) => {
+interface IUseOrderBookCumulativeTooltipDataReturn {
+  base: bigint;
+  quote: bigint;
+  avgPrice: bigint;
+}
+
+const useOrderBookCumulativeTooltipData = (
+  orders: IOrder[],
+  sizeDecimals: number,
+  tickDecimals: number,
+  orderType: TOrderType,
+): Map<number, IUseOrderBookCumulativeTooltipDataReturn> => {
   const cumulativeData = useMemo(() => {
     const ordersMap: Map<number, IOrder> = new Map(orders.entries());
     const ordersMapCumulative = new Map();
@@ -74,4 +85,4 @@ const useCumulativeTooltipData = (orders: IOrder[], sizeDecimals: number, tickDe
   return cumulativeData;
 };
 
-export default useCumulativeTooltipData;
+export default useOrderBookCumulativeTooltipData;

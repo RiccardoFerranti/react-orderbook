@@ -12,7 +12,12 @@ import type { IOrder } from '@/client/use-order-book';
  * @returns {{ bidPercentage: number, askPercentage: number }} - Percentages of bid and ask volume.
  */
 
-export function useBidAskPercentage(bids: IOrder[], asks: IOrder[], topN = 20) {
+interface IUseOrderBookBidAskPercentageReturn {
+  bidPercentage: number;
+  askPercentage: number;
+}
+
+export function useOrderBookBidAskPercentage(bids: IOrder[], asks: IOrder[], topN = 20): IUseOrderBookBidAskPercentageReturn {
   return useMemo(() => {
     const topBids = bids.slice(0, topN);
     const topAsks = asks.slice(0, topN);

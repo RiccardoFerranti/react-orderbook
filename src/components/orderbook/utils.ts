@@ -1,7 +1,3 @@
-import { ORDERBOOK_LABELS } from './consts';
-
-import { EPairs } from '@/types';
-
 /**
  * Returns the number of decimal digits up to the last non-zero digit in the string.
  * If the string consists of all zeros, returns undefined.

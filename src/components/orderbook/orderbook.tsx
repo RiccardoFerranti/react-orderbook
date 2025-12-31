@@ -1,19 +1,18 @@
 'use client';
 
-import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useRef, useState } from 'react';
 
 import OrderbookRowTooltip from './orderbook-row-tooltip';
 import { extractDecimals } from './utils';
 import OrderbookPopover from './orderbook-popover';
 import OrderbookLastTrade from './orderbook-last-trade';
 import OrderbookStepPriceDropdown from './orderbook-step-price-dropdown';
+import type { ITooltipData } from './types';
 import { EOrderTypes } from './types';
-import usePriceStepOrdered from './hooks/use-price-step-ordered';
-import useCumulativeTooltipData from './hooks/use-cumulative-tooltip-data';
-import useOrderBookTooltip from './hooks/use-orderbook-tooltip';
 import OrderbookBidAskPercentage from './orderbook-bid-ask-percentage';
-import { useBidAskPercentage } from './hooks/use-bid-ask-percentage';
+import { useOrderBookBidAskPercentage } from './hooks/use-orderbook-bid-ask-percentage';
 import {
+  DEFAULT_PRICE_STEP,
   ORDERBOOK_LABELS,
   ROW_HEIGHT,
   ROWS_NUMBER_EXPANDED,
@@ -22,6 +21,12 @@ import {
   TOOLTIP_WIDTH,
 } from './consts';
 import OrderbookSkeletonRow from './orderbook-skeleton-row';
+import useOrderBookTooltipCoordinates from './hooks/use-orderbook-tooltip-coordinates';
+import useOrderBookTooltipData from './hooks/use-orderbook-tooltip-data';
+import useOrderBookCumulativeTooltipData from './hooks/use-orderbook-cumulative-tooltip-data';
+import useOrderBookTooltip from './hooks/use-orderbook-tooltip';
+import useOrderBookPriceStepOrdered from './hooks/use-orderbook-price-step-ordered';
+import useOrderbookMaxBidAskSize from './hooks/use-orderbook-max-bid-ask-size';
 
 import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
@@ -31,11 +36,10 @@ import DefaultBuySellIcon from '@/assets/buy-sell-icon';
 import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
 import { cn } from '@/lib/utils';
-import { useOrderBook } from '@/client/use-order-book';
+import type { IOrderBook } from '@/client/use-order-book';
 import useExchangeInfo from '@/client/use-exchange-info';
 import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
-import mockOrderBookData from '@/mock/mocked-data';
 
 export interface IPopoverFields {
   rounding: boolean;
@@ -45,27 +49,21 @@ export const popoverFieldsInitialState = {
   rounding: true,
 };
 
-interface IOrderBookProps {
-  pair: any;
+interface IOrderBookProps extends IOrderBook {
+  pair: EPairs;
+  isOrdersLoading: boolean;
 }
 
 export default function OrderBook(props: IOrderBookProps) {
-  const { pair } = props;
+  const { pair, bids, asks, isOrdersLoading } = props;
 
   const [view, setView] = useState({ default: true, bid: false, ask: false });
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
-  const [priceStep, setPriceStep] = useState('0.01');
+  const [priceStep, setPriceStep] = useState(DEFAULT_PRICE_STEP);
 
-  const tooltipDataRef = useRef(null);
+  const tooltipDataRef = useRef<ITooltipData | null>(null);
   const bidContainerRef = useRef<HTMLDivElement | null>(null);
   const askContainerRef = useRef<HTMLDivElement | null>(null);
-
-  const {
-    orderBook: { bids, asks },
-    isOrderBookBidsLoading,
-    isOrderBookAsksLoading,
-  } = useOrderBook(pair);
-  // const { bids, asks } = mockOrderBookData;
 
   const { data } = useExchangeInfo(pair);
 
@@ -95,14 +93,34 @@ export default function OrderBook(props: IOrderBookProps) {
     );
   }, []);
 
-  const cumulativeBidData = useCumulativeTooltipData(bids, sizeDecimals, tickDecimals, EOrderTypes.bid);
-  const cumulativeAskData = useCumulativeTooltipData(asks, sizeDecimals, tickDecimals, EOrderTypes.ask);
+  /**
+   * Precomputes and retrieves cumulative tooltip data for the bid side of the order book.
+   * Utilizes the useCumulativeTooltipData hook, which calculates cumulative base and quote
+   * values for each bid price level, allowing for O(1) lookup during row hover events.
+   */
+  const cumulativeBidData = useOrderBookCumulativeTooltipData(bids, sizeDecimals, tickDecimals, EOrderTypes.bid);
+  const cumulativeAskData = useOrderBookCumulativeTooltipData(asks, sizeDecimals, tickDecimals, EOrderTypes.ask);
 
-  const bidsPriceStepOrdered = usePriceStepOrdered(bids, priceStep, view.default, true);
-  const asksPriceStepOrdered = usePriceStepOrdered(asks, priceStep, view.default, false);
+  /**
+   * Returns the list of bid orders, processed and grouped according to the selected price step and view settings.
+   */
+  const bidsPriceStepOrdered = useOrderBookPriceStepOrdered(bids, priceStep, view.default, true);
 
-  const { bidPercentage, askPercentage } = useBidAskPercentage(bids, asks);
+  /**
+   * Returns the list of ask orders, processed and grouped according to the selected price step and view settings.
+   */
+  const asksPriceStepOrdered = useOrderBookPriceStepOrdered(asks, priceStep, view.default, false);
 
+  /**
+   * Calculates the percentage share of bid and ask volumes in the order book.
+   * Utilizes the useBidAskPercentage hook to compute the respective percentages
+   * based on the top N (default 20) entries from both bids and asks arrays.
+   */
+  const { bidPercentage, askPercentage } = useOrderBookBidAskPercentage(bids, asks);
+
+  /**
+   * Custom order book tooltip hook providing state and handlers for tooltip display and row hover effects.
+   */
   const {
     hoverTooltipContent,
     isTooltipOpen,
@@ -120,60 +138,36 @@ export default function OrderBook(props: IOrderBookProps) {
     isHoveringAskRowRef,
   } = useOrderBookTooltip();
 
-  const tooltipData = useMemo(() => {
-    if (!hoverTooltipContent) return { base: 0, quote: 0, avgPrice: 0 };
-    const { price, orderType } = hoverTooltipContent;
-    const data = orderType === EOrderTypes.bid ? cumulativeBidData : cumulativeAskData;
-    const tooltipPriceData = data.get(price);
-    if (tooltipPriceData) tooltipDataRef.current = tooltipPriceData;
-    if (!tooltipPriceData) return tooltipDataRef.current;
-    return tooltipPriceData;
-  }, [cumulativeBidData, cumulativeAskData, hoverTooltipContent]);
+  /**
+   * Retrieves the tooltip data to display for the currently hovered row in the order book.
+   * Leverages precomputed cumulative data for bids and asks, and returns tooltip content
+   * for the current hover context.
+   */
+  const tooltipData = useOrderBookTooltipData({ cumulativeBidData, cumulativeAskData, hoverTooltipContent, tooltipDataRef });
+
+  /**
+   * Calculates and returns the tooltip coordinates for the order book based
+   * on the current hovered order row and container references.
+   * Uses useTooltipCoordinates hook to get top/left coordinates for the tooltip.
+   */
+  const tooltipCoordinates = useOrderBookTooltipCoordinates({
+    hoverTooltipContent,
+    rowBidRefs,
+    rowAskRefs,
+    containerRef,
+  });
 
   const bestBid = bids[0]?.price ?? 0;
   const bestAsk = asks[0]?.price ?? 0;
   const spread = bestBid && bestAsk ? formatNumber(bestAsk - bestBid, 2) : '--';
   const spreadPct = bestBid && bestAsk ? formatNumber(((bestAsk - bestBid) / ((bestBid + bestAsk) / 2)) * 100, 4) : '--';
 
-  const maxBidSize = useMemo(() => {
-    if (bids.length === 0) return 1; // prevent divide by 0 / NaN
-    return Math.max(...bids.slice(0, 20).map((r) => r.size * r.price));
-  }, [bids]);
-
-  const maxAskSize = useMemo(() => {
-    if (asks.length === 0) return 1; // prevent divide by 0 / NaN
-    return Math.max(...asks.slice(0, 20).map((r) => r.size * r.price));
-  }, [asks]);
-
-  const tooltipCoordinates = useMemo(() => {
-    const rowNode =
-      hoverTooltipContent?.orderType === EOrderTypes.bid
-        ? hoverTooltipContent && rowBidRefs.current.get(hoverTooltipContent.price)
-        : hoverTooltipContent && rowAskRefs.current.get(hoverTooltipContent.price);
-
-    let tooltipTop;
-    let tooltipLeft;
-
-    if (rowNode && containerRef.current) {
-      const rowRect = rowNode.getBoundingClientRect();
-      const containerRect = containerRef.current.getBoundingClientRect();
-
-      // row position relative to container
-      const topRelativeToContainer = rowRect.top - containerRect.top;
-
-      // center tooltip vertically on row
-      tooltipTop = topRelativeToContainer + rowRect.height / 2 - TOOLTIP_HEIGHT / 2;
-
-      // tooltip left/right
-      // tooltipLeft =
-      //   hoverTooltipContent && hoverTooltipContent.orderType === EOrderTypes.bid
-      //     ? rowRect.right - containerRect.left + 8
-      //     : rowRect.left - containerRect.left - TOOLTIP_WIDTH - 8;
-      tooltipLeft = rowRect.right - containerRect.left + 8;
-    }
-
-    return { tooltipTop, tooltipLeft };
-  }, [hoverTooltipContent]);
+  /**
+   * Calculates the maximum cumulative size (size * price) among the top 20 bids and asks.
+   * This is used to determine proportional bar widths for the orderbook heatmap.
+   * Returns 1 as the minimum value to avoid NaN/divide-by-zero.
+   */
+  const { maxBidSize, maxAskSize } = useOrderbookMaxBidAskSize({ bids, asks });
 
   const { priceToken, amountToken, totalToken } = ORDERBOOK_LABELS[pair as keyof typeof EPairs];
 
@@ -223,14 +217,14 @@ export default function OrderBook(props: IOrderBookProps) {
                   }}
                 >
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
-                  {isOrderBookAsksLoading &&
+                  {isOrdersLoading &&
                     asksPriceStepOrdered.length === 0 &&
                     Array.from({ length: visibleRows }).map((_, index) => (
                       <OrderbookSkeletonRow key={`ask-skeleton-${index}`} index={index} />
                     ))}
 
                   {/* REAL ROWS */}
-                  {!isOrderBookAsksLoading &&
+                  {!isOrdersLoading &&
                     asksPriceStepOrdered.map((ask, index) => {
                       if (!ask) return null;
 
@@ -287,14 +281,14 @@ export default function OrderBook(props: IOrderBookProps) {
                   }}
                 >
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
-                  {isOrderBookBidsLoading &&
+                  {isOrdersLoading &&
                     bidsPriceStepOrdered.length === 0 &&
                     Array.from({ length: visibleRows }).map((_, index) => (
                       <OrderbookSkeletonRow key={`bid-skeleton-${index}`} index={index} />
                     ))}
 
                   {/* REAL ROWS */}
-                  {!isOrderBookBidsLoading &&
+                  {!isOrdersLoading &&
                     bidsPriceStepOrdered.map((bid, index) => {
                       if (!bid) return null;
 

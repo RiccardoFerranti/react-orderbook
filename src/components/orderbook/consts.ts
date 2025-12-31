@@ -5,6 +5,8 @@ export const STEP_PRICES: Record<keyof typeof EPairs, string[]> = {
   ethusdc: ['0.01', '0.1', '1', '10', '50', '100'],
 };
 
+export const DEFAULT_PRICE_STEP = '0.01';
+
 export const TOOLTIP_HEIGHT = 90;
 
 export const TOOLTIP_WIDTH = 220;

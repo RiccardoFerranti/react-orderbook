@@ -8,12 +8,18 @@ import { useMemo } from 'react';
  * @param priceStep Step as string, e.g., '0.01', '0.1', '1', '10'
  * @param isBid Whether the orders are bids (descending) or asks (ascending)
  */
-const usePriceStepOrdered = (
+
+interface IUseOrderBookPriceStepOrderedReturn {
+  price: number;
+  size: number;
+}
+
+const useOrderBookPriceStepOrdered = (
   orders: { price: number; size: number }[],
   priceStep: string,
   defaultView: boolean,
   isBid: boolean,
-) => {
+): IUseOrderBookPriceStepOrderedReturn[] => {
   return useMemo(() => {
     if (defaultView && priceStep === '0.01') {
       return orders.sort((a, b) => b.price - a.price);
@@ -42,4 +48,4 @@ const usePriceStepOrdered = (
   }, [orders, priceStep, isBid]);
 };
 
-export default usePriceStepOrdered;
+export default useOrderBookPriceStepOrdered;
