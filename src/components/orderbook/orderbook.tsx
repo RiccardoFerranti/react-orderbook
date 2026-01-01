@@ -356,7 +356,7 @@ export default function OrderBook(props: IOrderBookProps) {
 
             {!isMobile && isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
               <div
-                className="absolute left-full ml-2 z-50"
+                className="absolute left-full z-50"
                 style={{
                   top: tooltipCoordinates.tooltipTop,
                   left: tooltipCoordinates.tooltipLeft,
