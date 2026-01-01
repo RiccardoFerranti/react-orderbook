@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useOrderBookBidAskPercentage } from '@/components/orderbook/hooks/use-orderbook-bid-ask-percentage';
 import OrderbookBidAskPercentage from '@/components/orderbook/orderbook-bid-ask-percentage';
@@ -96,6 +96,16 @@ export default function OrderBook(props: IOrderBookProps) {
   const handleSetPriceStep = useCallback((value: string) => {
     setPriceStep(value);
   }, []);
+
+  /**
+   * Resets the price step to the default value whenever the trading pair changes.
+   * Ensures that each pair starts with its default price step when switched.
+   *
+   * @effect Resets price step on pair change.
+   */
+  useEffect(() => {
+    setPriceStep(DEFAULT_PRICE_STEP);
+  }, [pair]);
 
   /**
    * Updates the view state to set the given view as active.
