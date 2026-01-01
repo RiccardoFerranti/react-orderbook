@@ -22,7 +22,7 @@ export default function PairsDropdown(props: IOrderbookPairsDropdownProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild className="border-0 w-50">
+      <DropdownMenuTrigger asChild className="border-0 w-50 h-10">
         <Button variant="outline" className="bg-transparent! text-foreground border border-foreground">
           {value.toUpperCase()} <ChevronDown />
         </Button>

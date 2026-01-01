@@ -1,35 +1,43 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
+import { Skeleton } from '../ui/skeleton';
+
 import { EOrderTypes } from '@/components/orderbook/types';
-import type { IOrderBookTradeRaw } from '@/components/orderbook/adapters/types';
 import { formatNumber } from '@/utils/format-number';
 import { cn } from '@/lib/utils';
 
 interface IOrderbookLastTradeProps {
-  spread: string;
-  spreadPct: string;
-  lastTrade: IOrderBookTradeRaw | null;
+  spread: string | null;
+  spreadPct: string | null;
+  lastTradePrice?: number;
+  orderType?: EOrderTypes.bid | EOrderTypes.ask;
 }
 
 export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
-  const { spread, spreadPct, lastTrade } = props;
+  const { spread, spreadPct, lastTradePrice, orderType } = props;
 
-  const lastTradePrice = lastTrade?.price ? formatNumber(lastTrade.price) : '--';
+  const lastTradePriceFormatted = lastTradePrice ? formatNumber(lastTradePrice) : null;
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <p
-        className={cn(`text-lg font-medium text-foreground flex items-center gap-2`, {
-          'text-red-500': lastTrade?.orderType === EOrderTypes.ask,
-          'text-green-500': lastTrade?.orderType === EOrderTypes.bid,
-        })}
-      >
-        {lastTradePrice}
-        {lastTrade?.orderType === EOrderTypes.ask ? <ArrowDown /> : <ArrowUp />}
-      </p>
-      <span className="text-xs text-muted-foreground">
-        Spread {spread} ({spreadPct}%)
-      </span>
+    <div className="flex flex-col items-center gap-2">
+      {lastTradePrice ? (
+        <p
+          className={cn('text-lg font-medium text-foreground flex items-center justify-center gap-2', {
+            'text-red-500': orderType === EOrderTypes.ask,
+            'text-green-500': orderType === EOrderTypes.bid,
+          })}
+        >
+          {lastTradePriceFormatted}
+          {orderType === EOrderTypes.ask ? <ArrowDown /> : <ArrowUp />}
+        </p>
+      ) : (
+        <Skeleton className="h-5 w-30 my-1" />
+      )}
+      <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+        <span>Spread</span>
+        <span>{spread ? `$${spread}` : <Skeleton className="h-2.5 w-8" />}</span>
+        <span>{spreadPct ? `(${spreadPct}%)` : <Skeleton className="h-2.5 w-14" />}</span>
+      </div>
     </div>
   );
 }

@@ -62,11 +62,13 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
 
     ws.onerror = (err) => {
       if (ENV === 'development') console.warn('[Binance WS] error', err);
-      () => onDisconnect?.();
     };
 
     ws.onclose = (event: CloseEvent) => {
-      if (ENV === 'development') {
+      // 1000 – Normal closure - This means the WebSocket closed gracefully.
+      // 1005 – No status received - This is a reserved code; it basically means “the server didn’t send a close code”.
+      // 1006 – Abnormal closure (connection dropped, server crash, network issues)
+      if (ENV === 'development' && event.code !== 1000 && event.code !== 1005) {
         console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
       }
       onDisconnect?.();
@@ -93,11 +95,13 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
 
     ws.onerror = (err) => {
       if (ENV === 'development') console.warn('[Binance WS] error', err);
-      () => onDisconnect?.();
     };
 
     ws.onclose = (event: CloseEvent) => {
-      if (ENV === 'development') {
+      // 1000 – Normal closure - This means the WebSocket closed gracefully.
+      // 1005 – No status received - This is a reserved code; it basically means “the server didn’t send a close code”.
+      // 1006 – Abnormal closure (connection dropped, server crash, network issues)
+      if (ENV === 'development' && event.code !== 1000 && event.code !== 1005) {
         console.warn('[Binance WS] closed', event.code, event.reason || '(no reason)');
       }
       onDisconnect?.();

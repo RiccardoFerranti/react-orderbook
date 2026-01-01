@@ -30,7 +30,7 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
         key={price}
         ref={ref}
         style={{
-          top: index * ROW_HEIGHT,
+          ...(orderType === EOrderTypes.ask ? { bottom: index * ROW_HEIGHT } : { top: index * ROW_HEIGHT }),
           height: ROW_HEIGHT,
         }}
         className="absolute left-0 w-full cursor-pointer py-0.5"

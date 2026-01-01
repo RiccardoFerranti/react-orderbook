@@ -22,7 +22,7 @@ const useOrderBookPriceStepOrdered = (
 ): IUseOrderBookPriceStepOrderedReturn[] => {
   return useMemo(() => {
     if (defaultView && priceStep === '0.01') {
-      return orders.sort((a, b) => b.price - a.price);
+      return orders.sort((a, b) => (isBid ? b.price - a.price : a.price - b.price));
     }
 
     const grouped = orders.reduce(
@@ -44,7 +44,7 @@ const useOrderBookPriceStepOrdered = (
     );
 
     // Convert grouped object to array and sort:
-    return Object.values(grouped).sort((a, b) => b.price - a.price);
+    return Object.values(grouped).sort((a, b) => (isBid ? b.price - a.price : a.price - b.price));
   }, [orders, priceStep, isBid]);
 };
 

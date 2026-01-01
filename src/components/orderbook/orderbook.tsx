@@ -20,7 +20,7 @@ import {
   TOOLTIP_HEIGHT,
   TOOLTIP_WIDTH,
 } from '@/components/orderbook/consts';
-import type { IOrderBook, IOrderBookAdapterCapabilities, IOrderBookTradeRaw } from '@/components/orderbook/adapters/types';
+import type { IOrderBook, IOrderBookAdapterCapabilities } from '@/components/orderbook/adapters/types';
 import useOrderbookMaxBidAskSize from '@/components/orderbook/hooks/use-orderbook-max-bid-ask-size';
 import useOrderBookPriceStepOrdered from '@/components/orderbook/hooks/use-orderbook-price-step-ordered';
 import useOrderBookTooltip from '@/components/orderbook/hooks/use-orderbook-tooltip';
@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { EConnectStuses, type TConnectionStatus } from '@/client/types';
 
 export interface IPopoverFields {
   rounding: boolean;
@@ -50,15 +51,17 @@ export const popoverFieldsInitialState = {
 
 interface IOrderBookProps extends IOrderBook {
   pair: EPairs;
-  isOrdersLoading: boolean;
-  lastTrade: IOrderBookTradeRaw | null;
+  lastTradePrice?: number;
+  orderType?: EOrderTypes.bid | EOrderTypes.ask;
   stepSize?: string;
   tickSize?: string;
   capabilities: IOrderBookAdapterCapabilities;
+  isInitialOrdersLoading: boolean;
+  status: TConnectionStatus;
 }
 
 export default function OrderBook(props: IOrderBookProps) {
-  const { pair, bids, asks, isOrdersLoading, lastTrade, stepSize, tickSize, capabilities } = props;
+  const { pair, bids, asks, lastTradePrice, orderType, stepSize, tickSize, capabilities, isInitialOrdersLoading, status } = props;
 
   const [view, setView] = useState({ default: true, bid: false, ask: false });
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
@@ -178,8 +181,10 @@ export default function OrderBook(props: IOrderBookProps) {
 
   const bestBid = bids[0]?.price ?? 0;
   const bestAsk = asks[0]?.price ?? 0;
-  const spread = bestBid && bestAsk ? formatNumber(bestAsk - bestBid, 2) : '--';
-  const spreadPct = bestBid && bestAsk ? formatNumber(((bestAsk - bestBid) / ((bestBid + bestAsk) / 2)) * 100, 4) : '--';
+  const hasData = bids.length > 0 && asks.length > 0;
+  const spread = hasData ? formatNumber(bestAsk - bestBid, 2) : null;
+  const spreadPct =
+    hasData && bestBid + bestAsk !== 0 ? formatNumber(((bestAsk - bestBid) / ((bestBid + bestAsk) / 2)) * 100, 4) : null;
 
   /**
    * Calculates the maximum cumulative size (size * price) among the top 20 bids and asks.
@@ -193,7 +198,7 @@ export default function OrderBook(props: IOrderBookProps) {
   const visibleRows = view.default ? ROWS_NUMBER_NOT_EXPANDED : ROWS_NUMBER_EXPANDED;
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
+    <div ref={containerRef} className="relative w-full">
       <Card className="w-full border-border/20 bg-(--card)/40 gap-2">
         <CardHeader className="flex flex-col gap-4">
           <div className="flex items-center justify-between w-full">
@@ -236,14 +241,13 @@ export default function OrderBook(props: IOrderBookProps) {
                   }}
                 >
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
-                  {isOrdersLoading &&
-                    asksPriceStepOrdered.length === 0 &&
+                  {(isInitialOrdersLoading || (status === EConnectStuses.disconnected && !asksPriceStepOrdered.length)) &&
                     Array.from({ length: visibleRows }).map((_, index) => (
                       <OrderbookSkeletonRow key={`ask-skeleton-${index}`} index={index} />
                     ))}
 
                   {/* REAL ROWS */}
-                  {!isOrdersLoading &&
+                  {!isInitialOrdersLoading &&
                     asksPriceStepOrdered.map((ask, index) => {
                       if (!ask) return null;
 
@@ -252,12 +256,12 @@ export default function OrderBook(props: IOrderBookProps) {
                           {/* HOVER / SELECTION OVERLAY */}
                           {isHoveringAskRowRef.current &&
                             askRowHoveredById.current !== null &&
-                            askRowHoveredById.current <= index && (
+                            askRowHoveredById.current >= index && (
                               <div
                                 className={cn('absolute left-0 pointer-events-none w-full z-1 bg-(--card-foreground)/5', {
                                   'border-t border-dashed border-border': askRowHoveredById.current === index,
                                 })}
-                                style={{ top: index * ROW_HEIGHT, height: ROW_HEIGHT }}
+                                style={{ bottom: index * ROW_HEIGHT, height: ROW_HEIGHT }}
                               />
                             )}
 
@@ -284,7 +288,9 @@ export default function OrderBook(props: IOrderBookProps) {
 
             <>
               <Separator className="bg-border/80" />
-              {capabilities.trades && <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTrade={lastTrade} />}
+              {capabilities.trades && (
+                <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTradePrice={lastTradePrice} orderType={orderType} />
+              )}
               <Separator className="bg-border/80" />
             </>
 
@@ -300,14 +306,13 @@ export default function OrderBook(props: IOrderBookProps) {
                   }}
                 >
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
-                  {isOrdersLoading &&
-                    bidsPriceStepOrdered.length === 0 &&
+                  {(isInitialOrdersLoading || (status === EConnectStuses.disconnected && !bidsPriceStepOrdered.length)) &&
                     Array.from({ length: visibleRows }).map((_, index) => (
                       <OrderbookSkeletonRow key={`bid-skeleton-${index}`} index={index} />
                     ))}
 
                   {/* REAL ROWS */}
-                  {!isOrdersLoading &&
+                  {!isInitialOrdersLoading &&
                     bidsPriceStepOrdered.map((bid, index) => {
                       if (!bid) return null;
 
@@ -345,6 +350,10 @@ export default function OrderBook(props: IOrderBookProps) {
                 </div>
               </div>
             )}
+            <div className="mt-2">
+              {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />}
+            </div>
+
             {!isMobile && isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
               <div
                 className="absolute left-full ml-2 z-50"
@@ -361,8 +370,6 @@ export default function OrderBook(props: IOrderBookProps) {
               </div>
             )}
           </div>
-
-          {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />}
         </CardContent>
       </Card>
     </div>

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { TConnectionStatus } from './types';
+import { EConnectStuses, type TConnectionStatus } from './types';
 
 import type { IOrderBookAdapter, IOrderBookTradeRaw, TOrderBookUnsubscribe } from '@/components/orderbook/adapters/types';
 import type { EPairs } from '@/types';
+import type { EOrderTypes } from '@/components/orderbook/types';
 
 /**
  * React hook to subscribe to live trades for a given trading pair using a specified order book adapter.
@@ -15,25 +16,19 @@ import type { EPairs } from '@/types';
  * @param {IOrderBookAdapter} adapter - The order book adapter providing the trade subscription.
  * @returns {IOrderBookTradeRaw | null} The most recent trade, or null if no trade has been received.
  */
-// export function useOrderBookTrades(pair: EPairs, adapter: IOrderBookAdapter) {
-//   const [lastTrade, setLastTrade] = useState<IOrderBookTradeRaw | null>(null);
 
-//   useEffect(() => {
-//     if (!adapter.capabilities.trades || !adapter.connectTrades) return;
+interface IUseOrderBookTradesReturn {
+  price?: number;
+  orderType?: EOrderTypes.bid | EOrderTypes.ask;
+  status: TConnectionStatus;
+}
 
-//     const disconnect = adapter.connectTrades(pair, setLastTrade);
-//     return () => disconnect();
-//   }, [pair, adapter]);
-
-//   return lastTrade;
-// }
-
-interface IUseOrderBookTradesReturn extends IOrderBookTradeRaw {}
 interface IUseOrderBookTrades {
   pair: EPairs;
   adapter: IOrderBookAdapter;
   maxRetries?: number;
   baseRetryDelay?: number;
+  healthRetryDelay?: number;
 }
 
 export function useOrderBookTrades({
@@ -41,55 +36,76 @@ export function useOrderBookTrades({
   adapter,
   maxRetries = 5,
   baseRetryDelay = 500,
-}: IUseOrderBookTrades): IUseOrderBookTradesReturn | null {
+  healthRetryDelay = 10000,
+}: IUseOrderBookTrades): IUseOrderBookTradesReturn {
+  // Stores the most recent trade received from the WS
   const [lastTrade, setLastTrade] = useState<IOrderBookTradeRaw | null>(null);
-  const [status, setStatus] = useState<TConnectionStatus>('connecting');
 
+  // Tracks the connection status: 'connecting' | 'connected' | 'disconnected'
+  const [status, setStatus] = useState<TConnectionStatus>(EConnectStuses.connecting);
+
+  // References to manage WS disconnect function, retry timeout, and health check interval
   const disconnectRef = useRef<TOrderBookUnsubscribe | null>(null);
-  const retryCountRef = useRef(0);
+  const retryCountRef = useRef(0); // Tracks retries for exponential backoff
   const retryTimeoutRef = useRef<number | null>(null);
 
+  /**
+   * scheduleRetry
+   * Called when the WebSocket fails or closes unexpectedly.
+   * Implements limited retries with incremental delay (exponential backoff).
+   * Stops retrying after maxRetries and sets status to 'disconnected'.
+   */
   const scheduleRetry = useCallback(() => {
-    if (document.hidden) return;
+    if (document.hidden) return; // Do not retry if tab is hidden
 
     if (retryCountRef.current >= maxRetries) {
-      setStatus('disconnected');
+      setStatus(EConnectStuses.disconnected); // Stop retrying after max attempts
       return;
     }
 
-    // Applied exponential backoff to reduces pressure on the WebSocket server, to prevent flooding with retries when
-    // the connection is unstable and to make the retry behavior more resilient in poor network conditions.
+    // Incremental delay
     const delay = baseRetryDelay * (retryCountRef.current + 1);
     retryCountRef.current += 1;
-    setStatus('connecting');
+    setStatus(EConnectStuses.connecting);
 
     retryTimeoutRef.current = window.setTimeout(() => connect(), delay);
   }, [baseRetryDelay, maxRetries]);
 
+  /**
+   * connect
+   * Initiates a WebSocket connection via adapter.connectTrades.
+   * Clears previous retries and disconnects any existing WS to prevent overlap.
+   * Resets retry count and updates status on successful trade messages.
+   */
   const connect = useCallback(() => {
     if (!adapter.connectTrades || document.hidden) return;
 
+    // Cancel previous retry to avoid overlap
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
 
+    // Disconnect previous WS if exists
     disconnectRef.current?.();
     disconnectRef.current = null;
 
-    setStatus('connecting');
+    setStatus(EConnectStuses.connecting);
 
     disconnectRef.current = adapter.connectTrades(
       pair,
       (trade) => {
         setLastTrade(trade);
-        setStatus('connected');
-        retryCountRef.current = 0;
+        setStatus(EConnectStuses.connected);
+        retryCountRef.current = 0; // reset retries
       },
-      scheduleRetry,
+      scheduleRetry, // Adapter will call this on WS error/close
     );
   }, [adapter, pair, scheduleRetry]);
 
+  /**
+   * Initial connection when hook mounts
+   */
   useEffect(() => {
     connect();
     return () => {
@@ -98,9 +114,12 @@ export function useOrderBookTrades({
     };
   }, [connect]);
 
+  /**
+   * Reconnect when the network comes back online
+   */
   useEffect(() => {
     const handleOnline = () => {
-      if (status !== 'connected') {
+      if (status !== EConnectStuses.connected) {
         retryCountRef.current = 0;
         connect();
       }
@@ -110,14 +129,19 @@ export function useOrderBookTrades({
     return () => window.removeEventListener('online', handleOnline);
   }, [connect, status]);
 
+  /**
+   * Handle tab visibility changes:
+   * - Disconnect WS when tab is hidden
+   * - Reconnect when tab becomes visible
+   */
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         disconnectRef.current?.();
         disconnectRef.current = null;
-        setStatus('disconnected');
+        setStatus(EConnectStuses.disconnected);
       } else {
-        if (status !== 'connected') {
+        if (status !== EConnectStuses.connected) {
           retryCountRef.current = 0;
           connect();
         }
@@ -128,5 +152,26 @@ export function useOrderBookTrades({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [connect, status]);
 
-  return lastTrade;
+  /**
+   * Periodic health check
+   * Runs only when status is 'disconnected' after exhausting maxRetries.
+   * Tries to reconnect every healthRetryDelay ms until successful.
+   */
+  useEffect(() => {
+    if (status !== EConnectStuses.disconnected) return;
+
+    retryCountRef.current = 0;
+
+    const id = window.setInterval(() => {
+      connect();
+    }, healthRetryDelay); // health probe interval
+
+    return () => clearInterval(id);
+  }, [status, connect]);
+
+  return {
+    price: lastTrade?.price,
+    orderType: lastTrade?.orderType,
+    status,
+  };
 }

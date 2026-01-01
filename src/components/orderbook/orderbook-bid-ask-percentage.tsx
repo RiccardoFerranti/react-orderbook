@@ -7,7 +7,7 @@ export default function OrderbookBidAskPercentage(props: IOrderbookBidAskPercent
   const { bidPercentage, askPercentage } = props;
 
   return (
-    <div className="w-full flex flex-col items-center pe-3">
+    <div className="w-full flex flex-col items-center">
       <div className="flex items-center justify-center gap-2 text-sm w-full">
         <span className="w-12">{bidPercentage.toFixed(2)}%</span>
         <div className="flex flex-1 h-2 rounded overflow-hidden bg-gray-200">

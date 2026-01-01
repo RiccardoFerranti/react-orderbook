@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { TConnectionStatus } from './types';
+import { EConnectStuses, type TConnectionStatus } from './types';
 
 import type { IOrderBook, IOrderBookAdapter, TOrderBookUnsubscribe } from '@/components/orderbook/adapters/types';
 import type { EPairs } from '@/types';
@@ -9,6 +9,7 @@ interface IUseOrderBookReturn {
   orderBook: IOrderBook;
   isLoading: boolean;
   capabilities: IOrderBookAdapter['capabilities'];
+  isInitialOrdersLoading: boolean;
   status: TConnectionStatus;
 }
 
@@ -18,6 +19,7 @@ interface IUseOrderBook {
   throttle?: number;
   maxRetries?: number;
   baseRetryDelay?: number;
+  healthRetryDelay?: number;
 }
 
 /**
@@ -39,21 +41,33 @@ export function useOrderBook({
   throttle = 500,
   maxRetries = 5,
   baseRetryDelay = 500,
+  healthRetryDelay = 10000,
 }: IUseOrderBook): IUseOrderBookReturn {
+  // Stores bids and asks received from the WS
   const [orderBook, setOrderBook] = useState<IOrderBook>({ bids: [], asks: [] });
-  const [status, setStatus] = useState<TConnectionStatus>('connecting');
 
+  // Tracks the connection status: 'connecting' | 'connected' | 'disconnected'
+  const [status, setStatus] = useState<TConnectionStatus>(EConnectStuses.connecting);
+
+  // References to manage WS disconnect function, retry timeout, health check interval, and last Update
   const disconnectRef = useRef<TOrderBookUnsubscribe | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<number | null>(null);
   const lastUpdateRef = useRef(0);
 
-  // Schedule a retry with exponential backoff
+  const hasEverConnectedRef = useRef(false);
+
+  /**
+   * scheduleRetry
+   * Called when the WebSocket fails or closes unexpectedly.
+   * Implements limited retries with incremental delay (exponential backoff).
+   * Stops retrying after maxRetries and sets status to 'disconnected'.
+   */
   const scheduleRetry = useCallback(() => {
-    if (document.hidden) return;
+    if (document.hidden) return; // Do not retry if tab is hidden
 
     if (retryCountRef.current >= maxRetries) {
-      setStatus('disconnected');
+      setStatus(EConnectStuses.disconnected);
       return;
     }
 
@@ -61,13 +75,19 @@ export function useOrderBook({
     // the connection is unstable and to make the retry behavior more resilient in poor network conditions.
     const delay = baseRetryDelay * (retryCountRef.current + 1);
     retryCountRef.current += 1;
-    setStatus('connecting');
+    setStatus(EConnectStuses.connecting);
 
     retryTimeoutRef.current = window.setTimeout(() => {
       connect();
     }, delay);
   }, [baseRetryDelay, maxRetries]);
 
+  /**
+   * connect
+   * Initiates a WebSocket connection via adapter.connectTrades.
+   * Clears previous retries and disconnects any existing WS to prevent overlap.
+   * Resets retry count and updates status on successful trade messages.
+   */
   const connect = useCallback(() => {
     if (!adapter.connectOrderBook || document.hidden) return;
 
@@ -81,7 +101,7 @@ export function useOrderBook({
     disconnectRef.current?.();
     disconnectRef.current = null;
 
-    setStatus('connecting');
+    setStatus(EConnectStuses.connecting);
 
     disconnectRef.current = adapter.connectOrderBook(
       pair,
@@ -91,14 +111,17 @@ export function useOrderBook({
 
         lastUpdateRef.current = now;
         setOrderBook(data);
-        setStatus('connected');
+        setStatus(EConnectStuses.connected);
         retryCountRef.current = 0; // reset retries
+        hasEverConnectedRef.current = true;
       },
-      scheduleRetry,
+      scheduleRetry, // Adapter will call this on WS error/close
     );
   }, [adapter, pair, throttle, scheduleRetry]);
 
-  // Initial connect
+  /**
+   * Initial connection when hook mounts
+   */
   useEffect(() => {
     connect();
     return () => {
@@ -107,10 +130,12 @@ export function useOrderBook({
     };
   }, [connect]);
 
-  // Reconnect on network restore
+  /**
+   * Reconnect when the network comes back online
+   */
   useEffect(() => {
     const handleOnline = () => {
-      if (status !== 'connected') {
+      if (status !== EConnectStuses.connected) {
         retryCountRef.current = 0;
         connect();
       }
@@ -120,15 +145,19 @@ export function useOrderBook({
     return () => window.removeEventListener('online', handleOnline);
   }, [connect, status]);
 
-  // Handle tab visibility
+  /**
+   * Handle tab visibility changes:
+   * - Disconnect WS when tab is hidden
+   * - Reconnect when tab becomes visible
+   */
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         disconnectRef.current?.();
         disconnectRef.current = null;
-        setStatus('disconnected');
+        setStatus(EConnectStuses.disconnected);
       } else {
-        if (status !== 'connected') {
+        if (status !== EConnectStuses.connected) {
           retryCountRef.current = 0;
           connect();
         }
@@ -139,10 +168,28 @@ export function useOrderBook({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [connect, status]);
 
+  /**
+   * Periodic health check
+   * Runs only when status is 'disconnected' after exhausting maxRetries.
+   * Tries to reconnect every healthRetryDelay ms until successful.
+   */
+  useEffect(() => {
+    if (status !== EConnectStuses.disconnected) return;
+
+    retryCountRef.current = 0;
+
+    const id = window.setInterval(() => {
+      connect();
+    }, healthRetryDelay); // health probe interval
+
+    return () => clearInterval(id);
+  }, [status, connect]);
+
   return {
     orderBook,
     isLoading: orderBook.bids.length === 0 || orderBook.asks.length === 0,
     capabilities: adapter.capabilities,
+    isInitialOrdersLoading: !hasEverConnectedRef.current && status === EConnectStuses.connecting,
     status,
   };
 }
