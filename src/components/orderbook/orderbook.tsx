@@ -13,6 +13,7 @@ import { extractDecimals } from '@/components/orderbook/utils';
 import OrderbookRowTooltip from '@/components/orderbook/orderbook-row-tooltip';
 import {
   DEFAULT_PRICE_STEP,
+  MAX_ROWS_DEFAULT_VISIBLE,
   ORDERBOOK_LABELS,
   ROW_HEIGHT,
   ROWS_NUMBER_EXPANDED,
@@ -40,6 +41,7 @@ import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { EConnectStuses, type TConnectionStatus } from '@/client/types';
+import { BINANCE_DEPTH_LEVEL } from '@/consts/config';
 
 export interface IPopoverFields {
   rounding: boolean;
@@ -205,7 +207,7 @@ export default function OrderBook(props: IOrderBookProps) {
 
   const { priceToken, amountToken, totalToken } = ORDERBOOK_LABELS[pair as keyof typeof EPairs];
 
-  const visibleRows = view.default ? ROWS_NUMBER_NOT_EXPANDED : ROWS_NUMBER_EXPANDED;
+  const visibleRows = BINANCE_DEPTH_LEVEL >= MAX_ROWS_DEFAULT_VISIBLE ? MAX_ROWS_DEFAULT_VISIBLE : BINANCE_DEPTH_LEVEL;
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -246,7 +248,7 @@ export default function OrderBook(props: IOrderBookProps) {
                   ref={askContainerRef}
                   className="relative overflow-hidden"
                   style={{
-                    minHeight: view.ask && !view.bid ? ROWS_NUMBER_EXPANDED * ROW_HEIGHT : ROWS_NUMBER_NOT_EXPANDED * ROW_HEIGHT,
+                    minHeight: view.ask && !view.bid ? BINANCE_DEPTH_LEVEL * ROW_HEIGHT : visibleRows * ROW_HEIGHT,
                     height: visibleRows * ROW_HEIGHT,
                   }}
                 >
@@ -311,8 +313,8 @@ export default function OrderBook(props: IOrderBookProps) {
                   ref={bidContainerRef}
                   className="relative overflow-hidden"
                   style={{
+                    minHeight: !view.ask && view.bid ? BINANCE_DEPTH_LEVEL * ROW_HEIGHT : visibleRows * ROW_HEIGHT,
                     height: visibleRows * ROW_HEIGHT,
-                    minHeight: !view.ask && view.bid ? ROWS_NUMBER_EXPANDED * ROW_HEIGHT : ROWS_NUMBER_NOT_EXPANDED * ROW_HEIGHT,
                   }}
                 >
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}

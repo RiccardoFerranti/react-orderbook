@@ -33,10 +33,11 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
   },
 
   connectOrderBook(pair, onData, onDisconnect) {
+    console.log('BINANCE_UPDATE_MS', BINANCE_UPDATE_MS);
+
     const wsUrl = `${BINANCE_WS_URL}${pair}@depth${BINANCE_DEPTH_LEVEL}@${BINANCE_UPDATE_MS}ms`;
     const ws = new WebSocket(wsUrl);
 
-    // let lastUpdate = 0;
     let current: IOrderBook = { bids: [], asks: [] };
 
     ws.onmessage = (event) => {

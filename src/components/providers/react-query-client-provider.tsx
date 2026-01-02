@@ -29,7 +29,7 @@ export default function QueryClientProviderWrapper(props: IQueryClientProviderWr
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {process.env.NEXT_PUBLIC_ENV === 'DEV' ? <ReactQueryDevtools initialIsOpen={false} /> : null}
+      {process.env.NEXT_PUBLIC_ENV === 'development' ? <ReactQueryDevtools initialIsOpen={false} /> : null}
     </QueryClientProvider>
   );
 }

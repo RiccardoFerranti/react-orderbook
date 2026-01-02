@@ -17,6 +17,8 @@ export const ROWS_NUMBER_NOT_EXPANDED = 10;
 
 export const ROWS_NUMBER_EXPANDED = 20;
 
+export const MAX_ROWS_DEFAULT_VISIBLE = 10;
+
 export const ORDERBOOK_LABELS = {
   btcusdc: {
     priceToken: 'USDC',
