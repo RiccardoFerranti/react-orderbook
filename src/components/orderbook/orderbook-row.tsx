@@ -1,7 +1,7 @@
 import { forwardRef, memo } from 'react';
 
-import { EOrderTypes, type TOrderType } from './types';
-
+import { EOrderTypes, type TOrderType } from '@/components/orderbook/types';
+import { ROW_HEIGHT } from '@/components/orderbook/consts';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/format-number';
 import formatNumberTruncate from '@/utils/format-number-truncate';
@@ -9,17 +9,19 @@ import formatNumberTruncate from '@/utils/format-number-truncate';
 interface IOrderBookRowProps {
   price: number;
   size: number;
-  handleHover: (price: number, orderType: TOrderType) => void;
+  handleHover: (price: number, orderType: TOrderType, index: number) => void;
   handleLeave: () => void;
   orderType: TOrderType;
-  rowHovered: number | null;
   isRounding: boolean;
+  maxSize: number;
+  index: number;
 }
 
 const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
-  ({ price, size, handleHover, handleLeave, rowHovered, orderType, isRounding }, ref) => {
+  ({ price, size, handleHover, handleLeave, orderType, isRounding, maxSize, index }, ref) => {
     const displayBaseFormatted = formatNumber(price, 2);
     const displayQuoteFormatted = formatNumber(size, 5);
+    const safeMaxSize = maxSize || 1;
 
     const displayAvgPriceFormatted = isRounding ? formatNumberTruncate(price * size) : formatNumber(price * size, 3);
 
@@ -27,26 +29,29 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
       <div
         key={price}
         ref={ref}
-        className={cn(
-          `flex ${orderType === 'buy' ? 'text-green-500' : 'text-red-500'} cursor-pointer py-0.5 
-          transition-colors duration-200 relative *:text-sm `,
-          {
-            'after:pointer-events-none after:content-[""] after:absolute after:left-0 after:w-full':
-              (rowHovered ?? 0) >= price || (rowHovered ?? 0) === price,
-            'after:h-full after:bg-(--card-foreground)/5': (rowHovered ?? 0) >= price,
-            'after:border-dotted after:border-border': (rowHovered ?? 0) === price,
-            'after:top-0 after:border-t': orderType === EOrderTypes.buy && rowHovered === price,
-            'after:top-0': orderType === EOrderTypes.buy && (rowHovered ?? 0) >= price,
-            'after:bottom-0 after:border-b': orderType === EOrderTypes.sell && rowHovered === price,
-            'after:bottom-0': orderType === EOrderTypes.sell && (rowHovered ?? 0) >= price,
-          },
-        )}
-        onPointerEnter={() => handleHover(price, orderType)}
+        style={{
+          ...(orderType === EOrderTypes.ask ? { bottom: index * ROW_HEIGHT } : { top: index * ROW_HEIGHT }),
+          height: ROW_HEIGHT,
+        }}
+        className="absolute left-0 w-full cursor-pointer py-0.5"
+        onPointerEnter={() => handleHover(price, orderType, index)}
         onPointerLeave={handleLeave}
       >
-        <span className="flex-1 text-start">{displayBaseFormatted}</span>
-        <span className="flex-1 text-end">{displayQuoteFormatted}</span>
-        <span className="flex-1 text-end">{displayAvgPriceFormatted}</span>
+        <div
+          className={cn(
+            `absolute right-0 top-0 h-full z-0 ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`,
+          )}
+          style={{
+            width: `${((size * price) / safeMaxSize) * 100}%`,
+          }}
+        />
+        <div className="relative flex w-full *:text-sm">
+          <span className={cn(`flex-1 text-start ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'}`)}>
+            {displayBaseFormatted}
+          </span>
+          <span className="flex-1 text-end text-muted-foreground">{displayQuoteFormatted}</span>
+          <span className="flex-1 text-end text-muted-foreground">{displayAvgPriceFormatted}</span>
+        </div>
       </div>
     );
   },

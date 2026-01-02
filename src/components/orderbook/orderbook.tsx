@@ -1,30 +1,47 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
-import { TooltipProvider } from '../ui/tooltip';
-import OrderbookRowTooltip from './orderbook-row-tooltip';
-import { extractDecimals } from './utils';
-import OrderbookPopover from './orderbook-popover';
-import OrderbookLastTrade from './orderbook-last-trade';
-import OrderbookDropdown from './orderbook-dropdown';
-import type { TOrderType } from './types';
-import { EOrderTypes } from './types';
-
+import { useOrderBookBidAskPercentage } from '@/components/orderbook/hooks/use-orderbook-bid-ask-percentage';
+import OrderbookBidAskPercentage from '@/components/orderbook/orderbook-bid-ask-percentage';
+import { EOrderTypes } from '@/components/orderbook/types';
+import type { ITooltipData } from '@/components/orderbook/types';
+import OrderbookStepPriceDropdown from '@/components/orderbook/orderbook-step-price-dropdown';
+import OrderbookLastTrade from '@/components/orderbook/orderbook-last-trade';
+import OrderbookPopover from '@/components/orderbook/orderbook-popover';
+import { extractDecimals } from '@/components/orderbook/utils';
+import OrderbookRowTooltip from '@/components/orderbook/orderbook-row-tooltip';
+import {
+  DEFAULT_PRICE_STEP,
+  MAX_ROWS_DEFAULT_VISIBLE,
+  ORDERBOOK_LABELS,
+  ROW_HEIGHT,
+  ROWS_NUMBER_EXPANDED,
+  ROWS_NUMBER_NOT_EXPANDED,
+  TOOLTIP_HEIGHT,
+  TOOLTIP_WIDTH,
+} from '@/components/orderbook/consts';
+import type { IOrderBook, IOrderBookAdapterCapabilities } from '@/components/orderbook/adapters/types';
+import useOrderbookMaxBidAskSize from '@/components/orderbook/hooks/use-orderbook-max-bid-ask-size';
+import useOrderBookPriceStepOrdered from '@/components/orderbook/hooks/use-orderbook-price-step-ordered';
+import useOrderBookTooltip from '@/components/orderbook/hooks/use-orderbook-tooltip';
+import useOrderBookCumulativeTooltipData from '@/components/orderbook/hooks/use-orderbook-cumulative-tooltip-data';
+import useOrderBookTooltipData from '@/components/orderbook/hooks/use-orderbook-tooltip-data';
+import useOrderBookTooltipCoordinates from '@/components/orderbook/hooks/use-orderbook-tooltip-coordinates';
+import OrderbookSkeletonRow from '@/components/orderbook/orderbook-skeleton-row';
 import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import DefaultBuySellIcon from '@/assets/buy-sell-icon';
 import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
 import { cn } from '@/lib/utils';
-import { useOrderBook } from '@/client/use-order-book';
-import mockOrderBookData from '@/mock/mocked-data';
-import useExchangeInfo from '@/client/use-exchange-info';
-import { EPairs } from '@/type';
+import type { EPairs } from '@/types';
 import { formatNumber } from '@/utils/format-number';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { EConnectStuses, type TConnectionStatus } from '@/client/types';
+import { BINANCE_DEPTH_LEVEL } from '@/consts/config';
 
 export interface IPopoverFields {
   rounding: boolean;
@@ -34,43 +51,38 @@ export const popoverFieldsInitialState = {
   rounding: true,
 };
 
-export default function OrderBook() {
-  const [view, setView] = useState({ default: true, buy: false, sell: false });
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const [hoverTooltipContent, setHoverTooltipContent] = useState<{
-    price: number;
-    orderType: string;
-  } | null>(null);
-  const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
+interface IOrderBookProps extends IOrderBook {
+  pair: EPairs;
+  lastTradePrice?: number;
+  orderType?: EOrderTypes.bid | EOrderTypes.ask;
+  stepSize?: string;
+  tickSize?: string;
+  capabilities: IOrderBookAdapterCapabilities;
+  isInitialOrdersLoading: boolean;
+  status: TConnectionStatus;
+}
+
+export default function OrderBook(props: IOrderBookProps) {
+  const { pair, bids, asks, lastTradePrice, orderType, stepSize, tickSize, capabilities, isInitialOrdersLoading, status } = props;
+
+  const [view, setView] = useState({ default: true, bid: false, ask: false });
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
-  const [priceStep, setPriceStep] = useState('0.01');
+  const [priceStep, setPriceStep] = useState(DEFAULT_PRICE_STEP);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  // It maps the reference of every row, it's used Map in order to have quicker access to the rows and improve performance
-  const rowBidRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const rowAskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const rafRef = useRef<number | null>(null);
-  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // It tracks when tooltip is hovered
-  const isHoveringTooltipRef = useRef(false);
-  // It tracks when row is hovered
-  const isHoveringRowRef = useRef(false);
-  // It tracks when buy or sell row are hovered
-  const rowBuyHovered = useRef<number | null>(null);
-  const rowSellHovered = useRef<number | null>(null);
+  const tooltipDataRef = useRef<ITooltipData | null>(null);
+  const bidContainerRef = useRef<HTMLDivElement | null>(null);
+  const askContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // const { bids, asks } = useOrderBook();
-  // console.log(bids);
+  const sizeDecimals = extractDecimals(stepSize);
+  const tickDecimals = extractDecimals(tickSize);
 
-  const { data } = useExchangeInfo(EPairs.btcusdc);
-
-  const sizeDecimals = extractDecimals(data?.stepSize);
-  const tickDecimals = extractDecimals(data?.tickSize);
-
-  const { bids, asks } = mockOrderBookData;
-  // 26,751.303974
-  // 26.751k
-
+  const isMobile = useIsMobile();
+  /**
+   * Updates a specific field in the popover state.
+   *
+   * @param {boolean} value - The new value to set for the field.
+   * @param {keyof typeof popoverFieldsInitialState} field - The field key to update (e.g., 'rounding').
+   */
   const handleSetPopoverFields = useCallback((value: boolean, field: keyof typeof popoverFieldsInitialState) => {
     setPopoverFields((prev) => ({
       ...prev,
@@ -78,10 +90,31 @@ export default function OrderBook() {
     }));
   }, []);
 
+  /**
+   * Updates the price step state.
+   *
+   * @param {string} value - The new price step value to set.
+   */
   const handleSetPriceStep = useCallback((value: string) => {
     setPriceStep(value);
   }, []);
 
+  /**
+   * Resets the price step to the default value whenever the trading pair changes.
+   * Ensures that each pair starts with its default price step when switched.
+   *
+   * @effect Resets price step on pair change.
+   */
+  useEffect(() => {
+    setPriceStep(DEFAULT_PRICE_STEP);
+  }, [pair]);
+
+  /**
+   * Updates the view state to set the given view as active.
+   * All other views will be set to inactive (false). Intended for toggling between order book views.
+   *
+   * @param {string} view - The name of the view to activate ("default", "bid", or "ask").
+   */
   const handleSetView = useCallback((view: string) => {
     setView((prev) =>
       Object.keys(prev).reduce(
@@ -94,303 +127,263 @@ export default function OrderBook() {
     );
   }, []);
 
-  const cumulativeBidData = useMemo(() => {
-    const bidsMap = new Map(bids.entries());
-    const bidsMapCumulative = new Map();
-
-    let baseInt = BigInt(0);
-    let quoteInt = BigInt(0);
-
-    for (let i = bidsMap.size - 1; i >= 0; i--) {
-      const row = bidsMap.get(i);
-      if (!row) continue;
-
-      // Floor to avoid floating-point artifacts and prevent rounding up quantities
-      // Even after scaling (size * 10^decimals), JS may produce a non-integer like 44999.99999999999.
-      // Floor ensures a safe integer for BigInt and avoids rounding up.
-      const sizeInt = BigInt(Math.floor(row.size * 10 ** sizeDecimals));
-      const priceInt = BigInt(Math.floor(row.price * 10 ** tickDecimals));
-
-      baseInt += sizeInt;
-      quoteInt += sizeInt * priceInt;
-
-      bidsMapCumulative.set(row.price, {
-        base: baseInt,
-        quote: quoteInt,
-        avgPrice: baseInt === 0n ? 0n : quoteInt / baseInt,
-      });
-    }
-
-    return bidsMapCumulative;
-  }, [bids, data?.stepSize, data?.tickSize, sizeDecimals, tickDecimals]);
-
-  const cumulativeAskData = useMemo(() => {
-    const asksMap = new Map(asks.entries());
-    const asksMapCumulative = new Map();
-
-    let baseInt = BigInt(0);
-    let quoteInt = BigInt(0);
-
-    for (let i = 0; i < asksMap.size; i++) {
-      const row = asksMap.get(i);
-      if (!row) continue;
-
-      // Floor to avoid floating-point artifacts and prevent rounding up quantities
-      // Even after scaling (size * 10^decimals), JS may produce a non-integer like 44999.99999999999.
-      // Floor ensures a safe integer for BigInt and avoids rounding up.
-      const sizeInt = BigInt(Math.floor(row.size * 10 ** sizeDecimals));
-      const priceInt = BigInt(Math.floor(row.price * 10 ** tickDecimals));
-
-      baseInt += sizeInt;
-      quoteInt += sizeInt * priceInt;
-
-      asksMapCumulative.set(row.price, {
-        base: baseInt,
-        quote: quoteInt,
-        avgPrice: baseInt === 0n ? 0n : quoteInt / baseInt,
-      });
-    }
-
-    return asksMapCumulative;
-  }, [asks]);
+  /**
+   * Precomputes and retrieves cumulative tooltip data for the bid side of the order book.
+   * Utilizes the useCumulativeTooltipData hook, which calculates cumulative base and quote
+   * values for each bid price level, allowing for O(1) lookup during row hover events.
+   */
+  const cumulativeBidData = useOrderBookCumulativeTooltipData(bids, sizeDecimals, tickDecimals, EOrderTypes.bid);
+  const cumulativeAskData = useOrderBookCumulativeTooltipData(asks, sizeDecimals, tickDecimals, EOrderTypes.ask);
 
   /**
-   * Groups and sorts bids or asks by a given priceStep.
-   * - Step = '0.01' → returns original array (no grouping)
-   * - Step > 0.01 → groups prices into steps, sums sizes, and sorts
-   * @param orders Array of orders (bids or asks)
-   * @param priceStep Step as string, e.g., '0.01', '0.1', '1', '10'
-   * @param isBid Whether the orders are bids (descending) or asks (ascending)
+   * Returns the list of bid orders, processed and grouped according to the selected price step and view settings.
    */
-  const usePriceStepOrdered = (orders: { price: number; size: number }[], priceStep: string, isBid: boolean) => {
-    return useMemo(() => {
-      if (priceStep === '0.01') return orders;
+  const bidsPriceStepOrdered = useOrderBookPriceStepOrdered(bids, priceStep, view.default, true);
 
-      const grouped = orders.reduce(
-        (acc, next) => {
-          // 1. Divide the price by the step size → how many steps fit into this price
-          // 2. Math.floor → round down to the start of the step group
-          // 3. Multiply by step → convert back to actual grouped price
-          const price = Math.floor(next.price / Number(priceStep)) * Number(priceStep);
+  /**
+   * Returns the list of ask orders, processed and grouped according to the selected price step and view settings.
+   */
+  const asksPriceStepOrdered = useOrderBookPriceStepOrdered(asks, priceStep, view.default, false);
 
-          if (!acc[price]) {
-            acc[price] = { ...next, price };
-          } else {
-            acc[price] = { ...next, size: acc[price].size + next.size };
-          }
+  /**
+   * Calculates the percentage share of bid and ask volumes in the order book.
+   * Utilizes the useBidAskPercentage hook to compute the respective percentages
+   * based on the top N (default 20) entries from both bids and asks arrays.
+   */
+  const { bidPercentage, askPercentage } = useOrderBookBidAskPercentage(bids, asks);
 
-          return acc;
-        },
-        {} as Record<string, { price: number; size: number }>,
-      );
+  /**
+   * Custom order book tooltip hook providing state and handlers for tooltip display and row hover effects.
+   */
+  const {
+    hoverTooltipContent,
+    isTooltipOpen,
+    containerRef,
+    rowBidRefs,
+    rowAskRefs,
+    handleHover,
+    handleLeave,
+    handleTooltipEnter,
+    handleTooltipLeave,
+    hoveredIndexRef,
+    bidRowHoveredById,
+    askRowHoveredById,
+    isHoveringBidRowRef,
+    isHoveringAskRowRef,
+  } = useOrderBookTooltip();
 
-      // Convert grouped object to array and sort:
-      // - bids → descending
-      // - asks → ascending
-      const sorted = Object.values(grouped).sort((a, b) => (isBid ? b.price - a.price : a.price - b.price));
+  /**
+   * Retrieves the tooltip data to display for the currently hovered row in the order book.
+   * Leverages precomputed cumulative data for bids and asks, and returns tooltip content
+   * for the current hover context.
+   */
+  const tooltipData = useOrderBookTooltipData({ cumulativeBidData, cumulativeAskData, hoverTooltipContent, tooltipDataRef });
 
-      return sorted;
-    }, [orders, priceStep, isBid]);
-  };
-
-  const bidsPriceStepOrdered = usePriceStepOrdered(bids, priceStep, true);
-  const asksPriceStepOrdered = usePriceStepOrdered(asks, priceStep, false);
-
-  const tooltipData = useMemo(() => {
-    if (!hoverTooltipContent) return { base: 0, quote: 0, avgPrice: 0 };
-    const { price, orderType } = hoverTooltipContent;
-    const data = orderType === 'buy' ? cumulativeBidData : cumulativeAskData;
-    return data.get(price);
-  }, [cumulativeBidData, cumulativeAskData, hoverTooltipContent]);
-
-  const handleHover = useCallback((price: number, orderType: TOrderType) => {
-    // It cancels pending close
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-
-    // It sets that we currently hovering a row
-    isHoveringRowRef.current = true;
-
-    if (orderType === EOrderTypes.buy) {
-      rowBuyHovered.current = price;
-    } else {
-      rowSellHovered.current = price;
-    }
-
-    // It deletes the previous animation when a new row is hovered
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-    // It stores the animation reference
-    rafRef.current = requestAnimationFrame(() => {
-      // It gets from the rows map the current row hovered
-      const node = orderType === EOrderTypes.buy ? rowBidRefs.current.get(price) : rowAskRefs.current.get(price);
-      if (!node || !containerRef.current) return;
-
-      const nodeRect = node.getBoundingClientRect();
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const relativeNodeRect = new DOMRect(
-        nodeRect.left - containerRect.left,
-        nodeRect.top - containerRect.top,
-        nodeRect.width,
-        nodeRect.height,
-      );
-      // It sets the row position relative to its wrapper
-      setHoverRect(relativeNodeRect);
-
-      setHoverTooltipContent({ price, orderType });
-
-      setIsTooltipOpen(true);
-    });
-  }, []);
-
-  const handleLeave = useCallback(() => {
-    isHoveringRowRef.current = false;
-    rowBuyHovered.current = null;
-    rowSellHovered.current = null;
-
-    // The delay is used to avoid to clsoe the tooltip when we pass from one row to another one
-    closeTimeoutRef.current = setTimeout(() => {
-      if (!isHoveringRowRef.current && !isHoveringTooltipRef.current) {
-        setIsTooltipOpen(false);
-        setHoverTooltipContent(null);
-        setHoverRect(null);
-      }
-    }, 80); // 50–120ms is a good compromise
-  }, []);
-
-  const handleTooltipEnter = useCallback(() => {
-    isHoveringTooltipRef.current = true;
-
-    // Since the hover is moved on the tooltip, we can cancel the timeout applied to the row
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-  }, []);
-
-  const handleTooltipLeave = useCallback(() => {
-    isHoveringTooltipRef.current = false;
-
-    // When we leave the tooltip if the hover is not on the row, we can close the tooltip and reset all
-    if (!isHoveringRowRef.current) {
-      setIsTooltipOpen(false);
-      setHoverTooltipContent(null);
-      setHoverRect(null);
-    }
-  }, []);
+  /**
+   * Calculates and returns the tooltip coordinates for the order book based
+   * on the current hovered order row and container references.
+   * Uses useTooltipCoordinates hook to get top/left coordinates for the tooltip.
+   */
+  const tooltipCoordinates = useOrderBookTooltipCoordinates({
+    hoverTooltipContent,
+    rowBidRefs,
+    rowAskRefs,
+    containerRef,
+  });
 
   const bestBid = bids[0]?.price ?? 0;
   const bestAsk = asks[0]?.price ?? 0;
-  const spread = bestBid && bestAsk ? formatNumber(bestAsk - bestBid, 2) : '--';
-  const spreadPct = bestBid && bestAsk ? formatNumber(((bestAsk - bestBid) / ((bestBid + bestAsk) / 2)) * 100, 4) : '--';
+  const hasData = bids.length > 0 && asks.length > 0;
+  const spread = hasData ? formatNumber(bestAsk - bestBid, 2) : null;
+  const spreadPct =
+    hasData && bestBid + bestAsk !== 0 ? formatNumber(((bestAsk - bestBid) / ((bestBid + bestAsk) / 2)) * 100, 4) : null;
+
+  /**
+   * Calculates the maximum cumulative size (size * price) among the top 20 bids and asks.
+   * This is used to determine proportional bar widths for the orderbook heatmap.
+   * Returns 1 as the minimum value to avoid NaN/divide-by-zero.
+   */
+  const { maxBidSize, maxAskSize } = useOrderbookMaxBidAskSize({ bids, asks });
+
+  const { priceToken, amountToken, totalToken } = ORDERBOOK_LABELS[pair as keyof typeof EPairs];
+
+  const visibleRows = BINANCE_DEPTH_LEVEL >= MAX_ROWS_DEFAULT_VISIBLE ? MAX_ROWS_DEFAULT_VISIBLE : BINANCE_DEPTH_LEVEL;
 
   return (
-    <TooltipProvider>
-      <div ref={containerRef} className="relative w-full">
-        <Card className="w-full border-border/20 bg-(--card)/40 max-w-md gap-2">
-          <CardHeader className="flex flex-col gap-4">
-            <div className="flex items-center justify-between w-full">
-              <CardTitle className="text-foreground">Order Book</CardTitle>
-              <OrderbookPopover popoverFields={popoverFields} onCheckedChange={handleSetPopoverFields} />
+    <div ref={containerRef} className="relative w-full">
+      <Card className="w-full border-border/20 bg-(--card)/40 gap-2">
+        <CardHeader className="flex flex-col gap-4">
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="text-foreground">Order Book</CardTitle>
+            <OrderbookPopover popoverFields={popoverFields} onCheckedChange={handleSetPopoverFields} />
+          </div>
+          <Separator className="bg-border/80" />
+          <CardAction className="p-0 m-0 flex justify-between w-full">
+            <div className="flex gap-2 *:p-0! *:cursor-pointer *:bg-transparent *:hover:bg-transparent">
+              <Button onClick={() => handleSetView('default')}>
+                <DefaultBuySellIcon />
+              </Button>
+              <Button onClick={() => handleSetView(EOrderTypes.bid)}>
+                <BuyIcon />
+              </Button>
+              <Button onClick={() => handleSetView(EOrderTypes.ask)}>
+                <SellIcon />
+              </Button>
             </div>
-            <Separator className="bg-border/80" />
-            <CardAction className="p-0 m-0 flex justify-between w-full">
-              <div className="flex gap-2 *:p-0! *:cursor-pointer *:bg-transparent *:hover:bg-transparen">
-                <Button onClick={() => handleSetView('default')}>
-                  <DefaultBuySellIcon />
-                </Button>
-                <Button onClick={() => handleSetView(EOrderTypes.buy)}>
-                  <BuyIcon />
-                </Button>
-                <Button onClick={() => handleSetView(EOrderTypes.sell)}>
-                  <SellIcon />
-                </Button>
-              </div>
-              <OrderbookDropdown value={priceStep} handleSetPriceStep={handleSetPriceStep} pair="btcusdc" />
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              <div className="flex pe-3">
-                <div className="text-sm text-muted-foreground flex-1">Price (USDC)</div>
-                <div className="text-sm text-muted-foreground flex-1 text-end">Amount (BTC)</div>
-                <div className="text-sm text-muted-foreground flex-1 text-end">Total (USDC)</div>
-              </div>
+            <OrderbookStepPriceDropdown value={priceStep} handleSetPriceStep={handleSetPriceStep} pair={pair} />
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
+            <div className="flex">
+              <div className="text-sm text-muted-foreground flex-1">Price ({priceToken})</div>
+              <div className="text-sm text-muted-foreground flex-1 text-end">Amount ({amountToken})</div>
+              <div className="text-sm text-muted-foreground flex-1 text-end">Total ({totalToken})</div>
+            </div>
 
-              {/* Bids */}
-              {(view.default || view.buy) && (
-                <ScrollArea className={cn('space-y-1npx pe-3 orderbook-radix-table-full', view.buy ? 'h-full' : 'h-72')}>
-                  <div className="flex flex-col justify-end h-full">
-                    {bidsPriceStepOrdered.map(({ price, size }) => (
-                      <OrderBookRow
-                        key={price}
-                        price={price}
-                        size={size}
-                        handleHover={handleHover}
-                        handleLeave={handleLeave}
-                        orderType={EOrderTypes.buy}
-                        ref={(el) => {
-                          if (el) rowBidRefs.current.set(price, el);
-                          else rowBidRefs.current.delete(price);
-                        }}
-                        rowHovered={rowBuyHovered.current}
-                        isRounding={popoverFields.rounding}
-                      />
+            {/* Asks */}
+            {(view.default || view.ask) && (
+              <div className={cn('space-y-1npx -mt-2')}>
+                <div
+                  ref={askContainerRef}
+                  className="relative overflow-hidden"
+                  style={{
+                    minHeight: view.ask && !view.bid ? BINANCE_DEPTH_LEVEL * ROW_HEIGHT : visibleRows * ROW_HEIGHT,
+                    height: visibleRows * ROW_HEIGHT,
+                  }}
+                >
+                  {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
+                  {(isInitialOrdersLoading || (status === EConnectStuses.disconnected && !asksPriceStepOrdered.length)) &&
+                    Array.from({ length: visibleRows }).map((_, index) => (
+                      <OrderbookSkeletonRow key={`ask-skeleton-${index}`} index={index} />
                     ))}
-                  </div>
-                </ScrollArea>
-              )}
 
-              {view.default && (
-                <>
-                  <Separator className="bg-border/80" />
-                  <OrderbookLastTrade spread={spread} spreadPct={spreadPct} />
-                  <Separator className="bg-border/80" />
-                </>
-              )}
+                  {/* REAL ROWS */}
+                  {!isInitialOrdersLoading &&
+                    asksPriceStepOrdered.map((ask, index) => {
+                      if (!ask) return null;
 
-              {/* Asks */}
-              {(view.default || view.sell) && (
-                <ScrollArea className={cn('space-y-1npx pe-3', view.sell ? 'h-full' : 'h-72')}>
-                  {asksPriceStepOrdered.map(({ price, size }) => (
-                    <div className="flex flex-col justify-start h-full">
-                      <OrderBookRow
-                        key={price}
-                        price={price}
-                        size={size}
-                        handleHover={handleHover}
-                        handleLeave={handleLeave}
-                        orderType={EOrderTypes.sell}
-                        ref={(el) => {
-                          if (el) rowAskRefs.current.set(price, el);
-                          else rowAskRefs.current.delete(price);
-                        }}
-                        rowHovered={rowSellHovered.current}
-                        isRounding={popoverFields.rounding}
-                      />
-                    </div>
-                  ))}
-                </ScrollArea>
+                      return (
+                        <Fragment key={ask.price}>
+                          {/* HOVER / SELECTION OVERLAY */}
+                          {isHoveringAskRowRef.current &&
+                            askRowHoveredById.current !== null &&
+                            askRowHoveredById.current >= index && (
+                              <div
+                                className={cn('absolute left-0 pointer-events-none w-full z-1 bg-(--card-foreground)/5', {
+                                  'border-t border-dashed border-border': askRowHoveredById.current === index,
+                                })}
+                                style={{ bottom: index * ROW_HEIGHT, height: ROW_HEIGHT }}
+                              />
+                            )}
+
+                          <OrderBookRow
+                            price={ask.price}
+                            size={ask.size}
+                            handleHover={handleHover}
+                            handleLeave={handleLeave}
+                            orderType={EOrderTypes.ask}
+                            ref={(el) => {
+                              if (el) rowAskRefs.current.set(ask.price, el);
+                              else rowAskRefs.current.delete(ask.price);
+                            }}
+                            isRounding={popoverFields.rounding}
+                            maxSize={maxAskSize}
+                            index={index}
+                          />
+                        </Fragment>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            <>
+              <Separator className="bg-border/80" />
+              {capabilities.trades && (
+                <OrderbookLastTrade spread={spread} spreadPct={spreadPct} lastTradePrice={lastTradePrice} orderType={orderType} />
               )}
+              <Separator className="bg-border/80" />
+            </>
+
+            {/* Bids */}
+            {(view.default || view.bid) && (
+              <div className={cn('space-y-1npx orderbook-radix-table-full -mb-2')}>
+                <div
+                  ref={bidContainerRef}
+                  className="relative overflow-hidden"
+                  style={{
+                    minHeight: !view.ask && view.bid ? BINANCE_DEPTH_LEVEL * ROW_HEIGHT : visibleRows * ROW_HEIGHT,
+                    height: visibleRows * ROW_HEIGHT,
+                  }}
+                >
+                  {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
+                  {(isInitialOrdersLoading || (status === EConnectStuses.disconnected && !bidsPriceStepOrdered.length)) &&
+                    Array.from({ length: visibleRows }).map((_, index) => (
+                      <OrderbookSkeletonRow key={`bid-skeleton-${index}`} index={index} />
+                    ))}
+
+                  {/* REAL ROWS */}
+                  {!isInitialOrdersLoading &&
+                    bidsPriceStepOrdered.map((bid, index) => {
+                      if (!bid) return null;
+
+                      return (
+                        <Fragment key={bid.price}>
+                          {/* HOVER / SELECTION OVERLAY */}
+                          {isHoveringBidRowRef.current &&
+                            bidRowHoveredById.current !== null &&
+                            bidRowHoveredById.current >= index && (
+                              <div
+                                className={cn('absolute left-0 top-0 w-full pointer-events-none z-1 bg-(--card-foreground)/5', {
+                                  'border-b border-dashed border-border': bidRowHoveredById.current === index,
+                                })}
+                                style={{ top: index * ROW_HEIGHT, height: ROW_HEIGHT }}
+                              />
+                            )}
+
+                          <OrderBookRow
+                            price={bid.price}
+                            size={bid.size}
+                            index={index}
+                            orderType={EOrderTypes.bid}
+                            handleHover={handleHover}
+                            handleLeave={handleLeave}
+                            isRounding={popoverFields.rounding}
+                            maxSize={maxBidSize}
+                            ref={(el) => {
+                              if (el) rowBidRefs.current.set(bid.price, el);
+                              else rowBidRefs.current.delete(bid.price);
+                            }}
+                          />
+                        </Fragment>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+            <div className="mt-2">
+              {view.default && <OrderbookBidAskPercentage bidPercentage={bidPercentage} askPercentage={askPercentage} />}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Single Tooltip */}
-        {hoverRect && hoverTooltipContent && (
-          <OrderbookRowTooltip
-            isTooltipOpen={isTooltipOpen}
-            hoverRect={hoverRect}
-            handleTooltipEnter={handleTooltipEnter}
-            handleTooltipLeave={handleTooltipLeave}
-            tooltipData={tooltipData}
-            sizeDecimals={sizeDecimals}
-            tickDecimals={tickDecimals}
-          />
-        )}
-      </div>
-    </TooltipProvider>
+            {!isMobile && isTooltipOpen && tooltipData && hoveredIndexRef.current !== null && (
+              <div
+                className="absolute left-full z-50"
+                style={{
+                  top: tooltipCoordinates.tooltipTop,
+                  left: tooltipCoordinates.tooltipLeft,
+                  width: TOOLTIP_WIDTH,
+                  height: TOOLTIP_HEIGHT,
+                }}
+                onPointerEnter={handleTooltipEnter}
+                onPointerLeave={handleTooltipLeave}
+              >
+                <OrderbookRowTooltip tooltipData={tooltipData} sizeDecimals={sizeDecimals} tickDecimals={tickDecimals} />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

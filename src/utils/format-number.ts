@@ -7,10 +7,6 @@
  * @returns {string} The formatted number as a string.
  */
 
-// export default function formatNumber(number: number | string, maxDigits = 3, lang = 'en-IN') {
-//   return new Intl.NumberFormat(lang, { maximumSignificantDigits: maxDigits }).format(Number(number));
-// }
-
 export function formatNumber(value: number | string, decimals = 2, lang = 'en-IN') {
   return new Intl.NumberFormat(lang, {
     minimumFractionDigits: decimals,

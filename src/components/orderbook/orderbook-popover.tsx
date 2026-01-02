@@ -1,10 +1,10 @@
 import { Ellipsis } from 'lucide-react';
 
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
-import { Label } from '../ui/label';
-import type { IPopoverFields, popoverFieldsInitialState } from './orderbook';
+import type { IPopoverFields, popoverFieldsInitialState } from '@/components/orderbook/orderbook';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface IOrderbookPopoverProps {
   onCheckedChange: (value: boolean, field: keyof typeof popoverFieldsInitialState) => void;

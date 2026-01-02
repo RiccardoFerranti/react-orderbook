@@ -1,8 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crypto Order Book
 
-## Getting Started
+![Use case](https://img.shields.io/badge/Use%20Case-Demo%20Dashboard-blue)
 
-First, run the development server:
+## Overview
+
+Real-time order book and trade stream built with Next.js and Binance WebSockets.
+Focuses on resilience, performance, and clean connection management.
+
+## Features
+
+- Real-time order book (bids / asks)
+- Live trade stream
+- WebSocket retry with backoff
+- Periodic health-check reconnect
+- Tab visibility & network awareness
+- Throttled UI updates
+- Graceful disconnect handling
+- Non-blocking UI state (order book & trades independent)
+
+## Architecture
+
+- Adapter-based WebSocket abstraction
+- Custom React hooks for order book and trades
+- Explicit connection state machine (`connecting | connected | disconnected`)
+- No server-side WebSocket proxy (client-only)
+
+## Environment Variables
+
+NEXT_PUBLIC_ENV=development
+NEXT_PUBLIC_BINANCE_WS_URL=wss://stream.binance.com:9443/ws/
+NEXT_PUBLIC_BINANCE_EXCHANGE_INFO_URL=https://api.binance.com/api/v3/exchangeInfo
+NEXT_PUBLIC_BINANCE_DEPTH_LEVEL=20
+NEXT_PUBLIC_BINANCE_UPDATE_MS=100
+
+## UI States
+
+- Skeleton rows on initial load
+- Persistent last-known data on reconnect
+- Connection status badge (non-intrusive)
+- Mobile-friendly indicators
+
+## Known Limitations
+
+- Binance WS supports only specific update intervals (100ms / 1000ms)
+- WebSocket stability depends on Binance availability
+
+## Screenshots / Demo
+
+<img src="doc/screenshots/orderbook-loading.png" alt="Order book loading state" width="600" />
+<img src="doc/screenshots/orderbook-connected.png" alt="Order book connected state"  width="600" />
+<img src="doc/screenshots/orderbook-change-pair.gif" width="600" />
+<img src="doc/screenshots/orderbook-expand.gif" width="600" />
+<img src="doc/screenshots/orderbook-step-price.gif" width="600" />
+<img src="doc/screenshots/orderbook-tooltip.gif" width="600" />
+<img src="doc/screenshots/orderbook-rounding.gif" width="600" />
+
+## Configuration
+
+| Variable                 | Default | Description                                  |
+| ------------------------ | ------- | -------------------------------------------- |
+| NEXT_BINANCE_DEPTH_LEVEL | 20      | Number of bids/asks per WS message           |
+| NEXT_BINANCE_UPDATE_MS   | 100     | Update frequency in milliseconds             |
+| throttle                 | 500     | Delay to update ui in milliseconds           |
+| maxRetries               | 5       | Number of retry attempts before health check |
+| baseRetryDelay           | 500     | Base delay (ms) for exponential backoff      |
+| healthRetryDelay         | 10000   | Interval for periodic health check           |
+
+## Notes
+
+- Binance WebSocket may occasionally stop or slow down; hook handles reconnects.
+- Throttle ensures UI doesn’t update too frequently.
+- Trades and order book work independently; one can fail while the other keeps updating.
+
+## Installation
+
+1. Clone the repo:
+
+```bash
+ git clone <repo-url>
+ cd <repo-folder>
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Set environment variables (optional, with defaults):
+
+```bash
+NEXT_BINANCE_DEPTH_LEVEL=20
+NEXT_BINANCE_UPDATE_MS=100
+```
+
+4. Start development server:
 
 ```bash
 npm run dev
@@ -14,23 +106,6 @@ pnpm dev
 bun dev
 ```
 
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
