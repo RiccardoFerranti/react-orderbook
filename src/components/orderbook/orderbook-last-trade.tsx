@@ -27,6 +27,7 @@ export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
           })}
         >
           <NumberFlow
+            className="min-w-22"
             value={lastTradePrice}
             plugins={[continuous]}
             format={{
