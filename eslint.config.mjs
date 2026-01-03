@@ -2,6 +2,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 import tseslint from '@typescript-eslint/eslint-plugin';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import tsparser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
 
@@ -20,6 +21,7 @@ const prettierConfig = compat.extends('prettier');
 const eslintConfig = [
   // Prettier config (disables conflicting ESLint rules)
   ...prettierConfig,
+  eslintPluginPrettierRecommended,
   {
     ignores: ['public/**', 'node_modules/**', '.next/**', 'out/**', 'build/**'],
   },
@@ -42,6 +44,7 @@ const eslintConfig = [
     },
     rules: {
       semi: ['error'],
+      'prettier/prettier': ['error'],
       '@typescript-eslint/naming-convention': [
         'error',
         {
@@ -82,4 +85,3 @@ const eslintConfig = [
 ];
 
 export default eslintConfig;
-

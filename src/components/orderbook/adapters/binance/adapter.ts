@@ -1,8 +1,9 @@
 import type { IOrder, IOrderBook, IOrderBookAdapter, IOrderBookTradeRaw } from '../types';
 import mergeValues from './merge-values';
 import { EOrderTypes } from '../../types';
+import { getBinanceWsUrl } from './utils/get-binance-ws-url';
 
-import { BINANCE_DEPTH_LEVEL, BINANCE_UPDATE_MS, BINANCE_WS_URL, ENV } from '@/consts/config';
+import { BINANCE_DEPTH_LEVEL, BINANCE_UPDATE_MS, ENV } from '@/consts/config';
 
 /**
  * React hook to provide live Binance order book for a trading pair, with throttled updates.
@@ -33,9 +34,8 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
   },
 
   connectOrderBook(pair, onData, onDisconnect) {
-    console.log('BINANCE_UPDATE_MS', BINANCE_UPDATE_MS);
-
-    const wsUrl = `${BINANCE_WS_URL}${pair}@depth${BINANCE_DEPTH_LEVEL}@${BINANCE_UPDATE_MS}ms`;
+    const binanceWsUrl = getBinanceWsUrl();
+    const wsUrl = `${binanceWsUrl}${pair}@depth${BINANCE_DEPTH_LEVEL}@${BINANCE_UPDATE_MS}ms`;
     const ws = new WebSocket(wsUrl);
 
     let current: IOrderBook = { bids: [], asks: [] };
@@ -79,7 +79,8 @@ export const binanceOrderBookAdapter: IOrderBookAdapter = {
   },
 
   connectTrades(pair, onTrade, onDisconnect) {
-    const wsUrl = `${BINANCE_WS_URL}${pair.toLowerCase()}@trade`;
+    const binanceWsUrl = getBinanceWsUrl();
+    const wsUrl = `${binanceWsUrl}${pair.toLowerCase()}@trade`;
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {

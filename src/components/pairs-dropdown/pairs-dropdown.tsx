@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { EPairs } from '@/types';
 
-interface IOrderbookPairsDropdownProps {
+export interface IOrderbookPairsDropdownProps {
   value: EPairs;
   handleSetPair: (value: string) => void;
 }
@@ -22,8 +22,8 @@ export default function PairsDropdown(props: IOrderbookPairsDropdownProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild className="border-0 w-50 h-10">
-        <Button variant="outline" className="bg-transparent! text-foreground border border-foreground">
+      <DropdownMenuTrigger asChild className="h-10 w-50 border-0">
+        <Button variant="outline" className="text-foreground border-foreground border bg-transparent!">
           {value.toUpperCase()} <ChevronDown />
         </Button>
       </DropdownMenuTrigger>

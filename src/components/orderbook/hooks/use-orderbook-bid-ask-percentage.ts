@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import type { IOrder } from '@/client/use-order-book';
+import type { IOrder } from '@/components/orderbook/adapters/types';
 
 /**
  * Custom hook to calculate the percentage share of bid and ask volumes

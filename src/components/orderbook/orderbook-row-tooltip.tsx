@@ -1,14 +1,14 @@
 import type { ITooltipData } from '@/components/orderbook/types';
 import { formatNumber } from '@/utils/format-number';
 
-interface IOrderbookRowTooltipProps {
+export interface IOrderbookRowTooltipProps {
   tooltipData: ITooltipData;
   sizeDecimals: number;
   tickDecimals: number;
 }
 
-export default function OrderbookRowTooltip({ tooltipData, sizeDecimals, tickDecimals }: IOrderbookRowTooltipProps) {
-  if (!tooltipData) return null;
+export default function OrderbookRowTooltip(props: IOrderbookRowTooltipProps) {
+  const { tooltipData, sizeDecimals, tickDecimals } = props;
 
   const { avgPrice, base, quote } = tooltipData;
 
@@ -19,7 +19,7 @@ export default function OrderbookRowTooltip({ tooltipData, sizeDecimals, tickDec
   const displayAvgPrice = Number(avgPrice) / 10 ** tickDecimals;
 
   return (
-    <div className="rounded-md border bg-popover p-3 shadow-md h-full w-full">
+    <div className="bg-popover h-full w-full rounded-md border p-3 shadow-md">
       <div className="flex flex-col gap-1 text-sm">
         <div className="flex justify-between">
           <span>Avg Price:</span>

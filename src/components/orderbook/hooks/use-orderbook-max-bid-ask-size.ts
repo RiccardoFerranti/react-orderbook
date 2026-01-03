@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import type { IOrderBook } from '@/client/use-order-book';
+import type { IOrderBook } from '@/components/orderbook/adapters/types';
 
 const useOrderbookMaxBidAskSize = ({ bids, asks }: IOrderBook) => {
   const maxBidSize = useMemo(() => {

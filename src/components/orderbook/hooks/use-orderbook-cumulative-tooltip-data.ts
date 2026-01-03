@@ -61,6 +61,7 @@ const useOrderBookCumulativeTooltipData = (
 
     for (let i = start; i !== end; i += step) {
       const row = ordersMap.get(i);
+
       if (!row) continue;
 
       // Floor to avoid floating-point artifacts and prevent rounding up quantities

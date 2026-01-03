@@ -36,10 +36,10 @@ export default function Home() {
   const { data } = useExchangeInfo(pair);
 
   return (
-    <div className="min-h-screen font-sans bg-(--background)/30">
-      <main className="flex min-h-screen w-full flex-col items-center justify-between py-8 px-4">
-        <div className="w-full max-w-md flex flex-col gap-8">
-          <div className="relative w-full flex flex-col items-center justify-between">
+    <div className="min-h-screen bg-(--background)/30 font-sans">
+      <main className="flex min-h-screen w-full flex-col items-center justify-between px-4 py-8">
+        <div className="flex w-full max-w-md flex-col gap-8">
+          <div className="relative flex w-full flex-col items-center justify-between">
             <PairsDropdown value={pair} handleSetPair={handleSetPair} />
             <ConnectStatus status={tradesStatus} className="absolute top-0 right-0" />
           </div>

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/format-number';
 import formatNumberTruncate from '@/utils/format-number-truncate';
 
-interface IOrderBookRowProps {
+export interface IOrderBookRowProps {
   price: number;
   size: number;
   handleHover: (price: number, orderType: TOrderType, index: number) => void;
@@ -39,7 +39,7 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
       >
         <div
           className={cn(
-            `absolute right-0 top-0 h-full z-0 ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`,
+            `absolute top-0 right-0 z-0 h-full ${orderType === EOrderTypes.bid ? 'bg-green-500/10' : 'bg-red-500/10'}`,
           )}
           style={{
             width: `${((size * price) / safeMaxSize) * 100}%`,
@@ -49,8 +49,8 @@ const OrderBookRow = forwardRef<HTMLDivElement, IOrderBookRowProps>(
           <span className={cn(`flex-1 text-start ${orderType === EOrderTypes.bid ? 'text-green-500' : 'text-red-500'}`)}>
             {displayBaseFormatted}
           </span>
-          <span className="flex-1 text-end text-muted-foreground">{displayQuoteFormatted}</span>
-          <span className="flex-1 text-end text-muted-foreground">{displayAvgPriceFormatted}</span>
+          <span className="text-muted-foreground flex-1 text-end">{displayQuoteFormatted}</span>
+          <span className="text-muted-foreground flex-1 text-end">{displayAvgPriceFormatted}</span>
         </div>
       </div>
     );

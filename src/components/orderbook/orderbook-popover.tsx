@@ -6,18 +6,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-interface IOrderbookPopoverProps {
+export interface IOrderbookPopoverProps {
   onCheckedChange: (value: boolean, field: keyof typeof popoverFieldsInitialState) => void;
   popoverFields: IPopoverFields;
 }
 
 export default function OrderbookPopover(props: IOrderbookPopoverProps) {
   const { onCheckedChange, popoverFields } = props;
-
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button className="bg-transparent hover:bg-transparent text-foreground/30 hover:text-foreground/80 cursor-pointer">
+        <Button className="text-foreground/30 hover:text-foreground/80 cursor-pointer bg-transparent hover:bg-transparent">
           <Ellipsis className="size-4" />
         </Button>
       </PopoverTrigger>
@@ -29,7 +28,6 @@ export default function OrderbookPopover(props: IOrderbookPopoverProps) {
               <Checkbox
                 id="rounding"
                 name="rounding"
-                defaultChecked
                 checked={popoverFields.rounding}
                 onCheckedChange={(value: boolean) => onCheckedChange(value, 'rounding')}
               />

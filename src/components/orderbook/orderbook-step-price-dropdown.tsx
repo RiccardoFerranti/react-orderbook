@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { EPairs } from '@/types';
 
-interface IOrderbookDropdownProps {
+export interface IOrderbookDropdownProps {
   value: string;
   handleSetPriceStep: (value: string) => void;
   pair: EPairs;
@@ -25,7 +25,7 @@ export default function OrderbookStepPriceDropdown(props: IOrderbookDropdownProp
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild className="border-0">
-        <Button variant="outline" className="bg-transparent! text-foreground">
+        <Button variant="outline" className="text-foreground bg-transparent!">
           {value} <ChevronDown />
         </Button>
       </DropdownMenuTrigger>

@@ -6,7 +6,7 @@ import { EOrderTypes } from '@/components/orderbook/types';
 import { formatNumber } from '@/utils/format-number';
 import { cn } from '@/lib/utils';
 
-interface IOrderbookLastTradeProps {
+export interface IOrderbookLastTradeProps {
   spread: string | null;
   spreadPct: string | null;
   lastTradePrice?: number;
@@ -22,7 +22,8 @@ export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
     <div className="flex flex-col items-center gap-2">
       {lastTradePrice ? (
         <p
-          className={cn('text-lg font-medium text-foreground flex items-center justify-center gap-2', {
+          data-testid="orderbook-last-trade"
+          className={cn('text-foreground flex items-center justify-center gap-2 text-lg font-medium', {
             'text-red-500': orderType === EOrderTypes.ask,
             'text-green-500': orderType === EOrderTypes.bid,
           })}
@@ -31,9 +32,9 @@ export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
           {orderType === EOrderTypes.ask ? <ArrowDown /> : <ArrowUp />}
         </p>
       ) : (
-        <Skeleton className="h-5 w-30 my-1" />
+        <Skeleton className="my-1 h-5 w-30" />
       )}
-      <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+      <div className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
         <span>Spread</span>
         <span>{spread ? `$${spread}` : <Skeleton className="h-2.5 w-8" />}</span>
         <span>{spreadPct ? `(${spreadPct}%)` : <Skeleton className="h-2.5 w-14" />}</span>
