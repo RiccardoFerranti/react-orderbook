@@ -1,9 +1,9 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
+import NumberFlow, { continuous } from '@number-flow/react';
 
 import { Skeleton } from '../ui/skeleton';
 
 import { EOrderTypes } from '@/components/orderbook/types';
-import { formatNumber } from '@/utils/format-number';
 import { cn } from '@/lib/utils';
 
 export interface IOrderbookLastTradeProps {
@@ -16,8 +16,6 @@ export interface IOrderbookLastTradeProps {
 export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
   const { spread, spreadPct, lastTradePrice, orderType } = props;
 
-  const lastTradePriceFormatted = lastTradePrice ? formatNumber(lastTradePrice) : null;
-
   return (
     <div className="flex flex-col items-center gap-2">
       {lastTradePrice ? (
@@ -28,7 +26,16 @@ export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
             'text-green-500': orderType === EOrderTypes.bid,
           })}
         >
-          {lastTradePriceFormatted}
+          <NumberFlow
+            value={lastTradePrice}
+            plugins={[continuous]}
+            format={{
+              style: 'decimal',
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }}
+            locales="en-IN"
+          />
           {orderType === EOrderTypes.ask ? <ArrowDown /> : <ArrowUp />}
         </p>
       ) : (
