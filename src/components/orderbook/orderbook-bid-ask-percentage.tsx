@@ -7,14 +7,14 @@ export default function OrderbookBidAskPercentage(props: IOrderbookBidAskPercent
   const { bidPercentage, askPercentage } = props;
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <div className="flex items-center justify-center gap-2 text-sm w-full">
+    <div className="flex w-full flex-col items-center">
+      <div className="flex w-full items-center justify-center gap-2 text-sm">
         <span className="w-12">{bidPercentage.toFixed(2)}%</span>
-        <div className="flex flex-1 h-2 rounded overflow-hidden bg-gray-200">
+        <div className="flex h-2 flex-1 overflow-hidden rounded bg-gray-200">
           {/* Bid part */}
-          <div className="bg-green-500 h-full" style={{ flex: bidPercentage }} />
+          <div className="h-full bg-green-500" style={{ flex: bidPercentage }} />
           {/* Ask part */}
-          <div className="bg-red-500 h-full" style={{ flex: askPercentage }} />
+          <div className="h-full bg-red-500" style={{ flex: askPercentage }} />
         </div>
         <span className="w-12">{askPercentage.toFixed(2)}%</span>
       </div>

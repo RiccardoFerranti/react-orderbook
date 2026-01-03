@@ -25,7 +25,7 @@ export default function OrderbookStepPriceDropdown(props: IOrderbookDropdownProp
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild className="border-0">
-        <Button variant="outline" className="bg-transparent! text-foreground">
+        <Button variant="outline" className="text-foreground bg-transparent!">
           {value} <ChevronDown />
         </Button>
       </DropdownMenuTrigger>

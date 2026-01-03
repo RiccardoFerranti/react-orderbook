@@ -14,7 +14,7 @@ export default function ConnectStatus(props: IConnectStatusProps) {
   const isMobile = useIsMobile();
 
   return (
-    <Badge className={`rounded-full px-3 h-10 min-w-10 flex gap-2 ${className || ''}`} variant="outline">
+    <Badge className={`flex h-10 min-w-10 gap-2 rounded-full px-3 ${className || ''}`} variant="outline">
       <div className="relative">
         <div
           className={cn(`size-2 rounded-full`, {
@@ -25,8 +25,8 @@ export default function ConnectStatus(props: IConnectStatusProps) {
         />
         <div
           className={cn(`absolute inset-0 size-2 rounded-full`, {
-            'bg-yellow-500 animate-ping': status === EConnectStuses.connecting,
-            'bg-green-500 animate-ping': status === EConnectStuses.connected,
+            'animate-ping bg-yellow-500': status === EConnectStuses.connecting,
+            'animate-ping bg-green-500': status === EConnectStuses.connected,
             'bg-red-500': status === EConnectStuses.disconnected,
           })}
         />

@@ -209,15 +209,15 @@ export default function OrderBook(props: IOrderBookProps) {
 
   return (
     <div ref={containerRef} className="relative w-full">
-      <Card className="w-full border-border/20 bg-(--card)/40 gap-2">
+      <Card className="border-border/20 w-full gap-2 bg-(--card)/40">
         <CardHeader className="flex flex-col gap-4">
-          <div className="flex items-center justify-between w-full">
+          <div className="flex w-full items-center justify-between">
             <CardTitle className="text-foreground">Order Book</CardTitle>
             <OrderbookPopover popoverFields={popoverFields} onCheckedChange={handleSetPopoverFields} />
           </div>
           <Separator className="bg-border/80" />
-          <CardAction className="p-0 m-0 flex justify-between w-full">
-            <div className="flex gap-2 *:p-0! *:cursor-pointer *:bg-transparent *:hover:bg-transparent">
+          <CardAction className="m-0 flex w-full justify-between p-0">
+            <div className="flex gap-2 *:cursor-pointer *:bg-transparent *:p-0! *:hover:bg-transparent">
               <Button onClick={() => handleSetView('default')}>
                 <DefaultBuySellIcon />
               </Button>
@@ -234,9 +234,9 @@ export default function OrderBook(props: IOrderBookProps) {
         <CardContent className="flex flex-col gap-2">
           <div className="flex flex-col gap-2">
             <div className="flex">
-              <div className="text-sm text-muted-foreground flex-1">Price ({priceToken})</div>
-              <div className="text-sm text-muted-foreground flex-1 text-end">Amount ({amountToken})</div>
-              <div className="text-sm text-muted-foreground flex-1 text-end">Total ({totalToken})</div>
+              <div className="text-muted-foreground flex-1 text-sm">Price ({priceToken})</div>
+              <div className="text-muted-foreground flex-1 text-end text-sm">Amount ({amountToken})</div>
+              <div className="text-muted-foreground flex-1 text-end text-sm">Total ({totalToken})</div>
             </div>
 
             {/* Asks */}
@@ -268,8 +268,8 @@ export default function OrderBook(props: IOrderBookProps) {
                             askRowHoveredById.current !== null &&
                             askRowHoveredById.current >= index && (
                               <div
-                                className={cn('absolute left-0 pointer-events-none w-full z-1 bg-(--card-foreground)/5', {
-                                  'border-t border-dashed border-border': askRowHoveredById.current === index,
+                                className={cn('pointer-events-none absolute left-0 z-1 w-full bg-(--card-foreground)/5', {
+                                  'border-border border-t border-dashed': askRowHoveredById.current === index,
                                 })}
                                 style={{ bottom: index * ROW_HEIGHT, height: ROW_HEIGHT }}
                               />
@@ -333,8 +333,8 @@ export default function OrderBook(props: IOrderBookProps) {
                             bidRowHoveredById.current !== null &&
                             bidRowHoveredById.current >= index && (
                               <div
-                                className={cn('absolute left-0 top-0 w-full pointer-events-none z-1 bg-(--card-foreground)/5', {
-                                  'border-b border-dashed border-border': bidRowHoveredById.current === index,
+                                className={cn('pointer-events-none absolute top-0 left-0 z-1 w-full bg-(--card-foreground)/5', {
+                                  'border-border border-b border-dashed': bidRowHoveredById.current === index,
                                 })}
                                 style={{ top: index * ROW_HEIGHT, height: ROW_HEIGHT }}
                               />

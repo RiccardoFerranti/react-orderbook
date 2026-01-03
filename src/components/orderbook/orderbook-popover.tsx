@@ -16,7 +16,7 @@ export default function OrderbookPopover(props: IOrderbookPopoverProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button className="bg-transparent hover:bg-transparent text-foreground/30 hover:text-foreground/80 cursor-pointer">
+        <Button className="text-foreground/30 hover:text-foreground/80 cursor-pointer bg-transparent hover:bg-transparent">
           <Ellipsis className="size-4" />
         </Button>
       </PopoverTrigger>

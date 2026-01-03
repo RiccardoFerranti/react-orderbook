@@ -19,7 +19,7 @@ export default function OrderbookRowTooltip(props: IOrderbookRowTooltipProps) {
   const displayAvgPrice = Number(avgPrice) / 10 ** tickDecimals;
 
   return (
-    <div className="rounded-md border bg-popover p-3 shadow-md h-full w-full">
+    <div className="bg-popover h-full w-full rounded-md border p-3 shadow-md">
       <div className="flex flex-col gap-1 text-sm">
         <div className="flex justify-between">
           <span>Avg Price:</span>
