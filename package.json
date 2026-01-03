@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "lint:test": "eslint 'src/**/*.{test.ts,test.tsx}'",
+    "lint:test:fix": "eslint 'src/**/*.{test.ts,test.tsx}' --fix",
+    "lint:all": "npm run lint && npm run lint:test",
+    "lint:all:fix": "npm run lint:fix && npm run lint:test:fix",
     "test": "TZ=UTC jest --testRegex '.*\\.test\\.(ts|tsx)$'",
     "test:watch": "CHOKIDAR_USEPOLLING=true WATCHPACK_POLLING=true TZ=UTC jest --watch src/components --testRegex \".*\\.test\\.(ts|tsx)$\"",
     "prepare": "husky"

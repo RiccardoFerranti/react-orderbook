@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run full lint on all code
+npm run lint:all:fix
+
+# Run tests
+npm test
