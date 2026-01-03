@@ -5,6 +5,14 @@ import OrderbookLastTrade from './orderbook-last-trade';
 
 import { EOrderTypes } from '@/components/orderbook/types';
 
+jest.mock('@number-flow/react', () => {
+  return {
+    __esModule: true,
+    default: ({ value }: { value: number }) => <span>{value.toLocaleString('en-IN')}</span>,
+    continuous: {},
+  };
+});
+
 describe('OrderbookLastTrade', () => {
   let mockedProps: IOrderbookLastTradeProps;
 
@@ -31,9 +39,8 @@ describe('OrderbookLastTrade', () => {
   it('should render `last trade price` with `green color` and `up arrow` for bid', () => {
     render(<OrderbookLastTrade {...mockedProps} />);
 
-    const price = screen.getByText(/25,000/);
-    expect(price).toBeInTheDocument();
-    expect(price).toHaveClass('text-green-500');
+    expect(screen.getByText(/25,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('orderbook-last-trade')).toHaveClass('text-green-500');
 
     // Spread values
     expect(screen.getByText('$12.5')).toBeInTheDocument();
@@ -44,9 +51,8 @@ describe('OrderbookLastTrade', () => {
     mockedProps.orderType = EOrderTypes.ask;
     render(<OrderbookLastTrade {...mockedProps} />);
 
-    const price = screen.getByText(/25,000/);
-    expect(price).toBeInTheDocument();
-    expect(price).toHaveClass('text-red-500');
+    expect(screen.getByText(/25,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('orderbook-last-trade')).toHaveClass('text-red-500');
   });
 
   it('should render `spread skeletons` when `spread data` is missing', () => {

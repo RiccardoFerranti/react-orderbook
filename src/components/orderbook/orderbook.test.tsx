@@ -12,6 +12,14 @@ jest.mock('../../hooks/use-is-mobile', () => ({
   useIsMobile: jest.fn(),
 }));
 
+jest.mock('@number-flow/react', () => {
+  return {
+    __esModule: true,
+    default: ({ value }: { value: number }) => <span>{value.toLocaleString('en-IN')}</span>,
+    continuous: {},
+  };
+});
+
 const mockedUseIsMobile = useIsMobile as jest.Mock;
 
 interface IOrderBookProps extends IOrderBook {
