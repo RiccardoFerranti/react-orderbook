@@ -1,4 +1,4 @@
-import type { IOrder } from '@/client/use-order-book';
+import type { IOrder } from '@/components/orderbook/adapters/types';
 
 /**
  * Merge new order book values with previous ones while preserving references

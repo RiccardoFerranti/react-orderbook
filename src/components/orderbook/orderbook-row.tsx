@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatNumber } from '@/utils/format-number';
 import formatNumberTruncate from '@/utils/format-number-truncate';
 
-interface IOrderBookRowProps {
+export interface IOrderBookRowProps {
   price: number;
   size: number;
   handleHover: (price: number, orderType: TOrderType, index: number) => void;

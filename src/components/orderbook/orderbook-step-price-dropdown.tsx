@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { EPairs } from '@/types';
 
-interface IOrderbookDropdownProps {
+export interface IOrderbookDropdownProps {
   value: string;
   handleSetPriceStep: (value: string) => void;
   pair: EPairs;

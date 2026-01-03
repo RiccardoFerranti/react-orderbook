@@ -6,7 +6,7 @@ import { EOrderTypes } from '@/components/orderbook/types';
 import { formatNumber } from '@/utils/format-number';
 import { cn } from '@/lib/utils';
 
-interface IOrderbookLastTradeProps {
+export interface IOrderbookLastTradeProps {
   spread: string | null;
   spreadPct: string | null;
   lastTradePrice?: number;
@@ -22,6 +22,7 @@ export default function OrderbookLastTrade(props: IOrderbookLastTradeProps) {
     <div className="flex flex-col items-center gap-2">
       {lastTradePrice ? (
         <p
+          data-testid="orderbook-last-trade"
           className={cn('text-lg font-medium text-foreground flex items-center justify-center gap-2', {
             'text-red-500': orderType === EOrderTypes.ask,
             'text-green-500': orderType === EOrderTypes.bid,

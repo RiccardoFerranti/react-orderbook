@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { BINANCE_EXCHANGE_INFO_URL } from '@/consts/config';
+import { getBinanceExchangeInfoUrl } from './utils/get-binance-exchange-info-url';
+
 /**
  * React hook to fetch and parse exchange info for a specific trading pair from Binance API.
  *
@@ -24,11 +25,11 @@ const useExchangeInfo = (pair: string) => {
   if (!pair) throw new Error('The pair is mandatory');
 
   const formattedPair = pair.toUpperCase();
-
+  const binanceExchangeInfoUrl = getBinanceExchangeInfoUrl();
   const { data, isLoading, isError } = useQuery({
     queryKey: ['exchange-info', formattedPair],
     queryFn: async () => {
-      const response = await fetch(`${BINANCE_EXCHANGE_INFO_URL}?symbol=${formattedPair}`);
+      const response = await fetch(`${binanceExchangeInfoUrl}?symbol=${formattedPair}`);
       if (!response.ok) throw new Error('Failed to fetch exchange info');
       const json = await response.json();
       return json;
@@ -38,7 +39,6 @@ const useExchangeInfo = (pair: string) => {
       if (!symbol) throw new Error('Symbol not found');
 
       const priceFilter = symbol.filters.find((f: any) => f.filterType === 'PRICE_FILTER');
-
       const lotSizeFilter = symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE');
 
       return {

@@ -1,7 +1,13 @@
 import { ROW_HEIGHT } from '@/components/orderbook/consts';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function OrderbookSkeletonRow({ index }: { index: number }) {
+export interface IOrderbookSkeletonRowProps {
+  index: number;
+}
+
+export default function OrderbookSkeletonRow(props: IOrderbookSkeletonRowProps) {
+  const { index } = props;
+
   return (
     <div
       className="absolute left-0 w-full p-1"

@@ -1,14 +1,14 @@
 import type { ITooltipData } from '@/components/orderbook/types';
 import { formatNumber } from '@/utils/format-number';
 
-interface IOrderbookRowTooltipProps {
+export interface IOrderbookRowTooltipProps {
   tooltipData: ITooltipData;
   sizeDecimals: number;
   tickDecimals: number;
 }
 
-export default function OrderbookRowTooltip({ tooltipData, sizeDecimals, tickDecimals }: IOrderbookRowTooltipProps) {
-  if (!tooltipData) return null;
+export default function OrderbookRowTooltip(props: IOrderbookRowTooltipProps) {
+  const { tooltipData, sizeDecimals, tickDecimals } = props;
 
   const { avgPrice, base, quote } = tooltipData;
 

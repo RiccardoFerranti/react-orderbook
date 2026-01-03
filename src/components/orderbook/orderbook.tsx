@@ -12,12 +12,10 @@ import OrderbookPopover from '@/components/orderbook/orderbook-popover';
 import { extractDecimals } from '@/components/orderbook/utils';
 import OrderbookRowTooltip from '@/components/orderbook/orderbook-row-tooltip';
 import {
-  DEFAULT_PRICE_STEP,
+  MINIMUM_PRICE_STEP,
   MAX_ROWS_DEFAULT_VISIBLE,
   ORDERBOOK_LABELS,
   ROW_HEIGHT,
-  ROWS_NUMBER_EXPANDED,
-  ROWS_NUMBER_NOT_EXPANDED,
   TOOLTIP_HEIGHT,
   TOOLTIP_WIDTH,
 } from '@/components/orderbook/consts';
@@ -67,7 +65,7 @@ export default function OrderBook(props: IOrderBookProps) {
 
   const [view, setView] = useState({ default: true, bid: false, ask: false });
   const [popoverFields, setPopoverFields] = useState<IPopoverFields>(popoverFieldsInitialState);
-  const [priceStep, setPriceStep] = useState(DEFAULT_PRICE_STEP);
+  const [priceStep, setPriceStep] = useState(MINIMUM_PRICE_STEP);
 
   const tooltipDataRef = useRef<ITooltipData | null>(null);
   const bidContainerRef = useRef<HTMLDivElement | null>(null);
@@ -106,7 +104,7 @@ export default function OrderBook(props: IOrderBookProps) {
    * @effect Resets price step on pair change.
    */
   useEffect(() => {
-    setPriceStep(DEFAULT_PRICE_STEP);
+    setPriceStep(MINIMUM_PRICE_STEP);
   }, [pair]);
 
   /**

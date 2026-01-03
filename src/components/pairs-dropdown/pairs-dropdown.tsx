@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { EPairs } from '@/types';
 
-interface IOrderbookPairsDropdownProps {
+export interface IOrderbookPairsDropdownProps {
   value: EPairs;
   handleSetPair: (value: string) => void;
 }

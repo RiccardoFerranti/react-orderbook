@@ -1,4 +1,4 @@
-interface IOrderbookBidAskPercentageProps {
+export interface IOrderbookBidAskPercentageProps {
   bidPercentage: number;
   askPercentage: number;
 }
