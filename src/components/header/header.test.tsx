@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import Header from './header';
+import Header from '@/components/header/header';
 
 // Create a mock toggle function
 const toggleMock = jest.fn();

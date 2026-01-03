@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { IOrderbookPairsDropdownProps } from './pairs-dropdown';
-import PairsDropdown from './pairs-dropdown';
-
+import PairsDropdown from '@/components/pairs-dropdown/pairs-dropdown';
+import type { IOrderbookPairsDropdownProps } from '@/components/pairs-dropdown/pairs-dropdown';
 import { EPairs } from '@/types';
 
 describe('PairsDropdown', () => {
@@ -18,12 +17,12 @@ describe('PairsDropdown', () => {
     mockedHandleSetPair.mockClear();
   });
 
-  it('renders the selected value', () => {
+  it('should render the `selected value`', () => {
     render(<PairsDropdown value={mockedProps.value} handleSetPair={mockedProps.handleSetPair} />);
     expect(screen.getByRole('button', { name: /btcusdc/i })).toBeInTheDocument();
   });
 
-  it('calls handleSetPair when an option is selected', async () => {
+  it('should call `handleSetPair` when an `option is selected`', async () => {
     // Creates a userEvent instance that simulates real user interactions.
     // userEvent is better than fireEvent because it handles async behavior, focus, and realistic browser events.
     const user = userEvent.setup();

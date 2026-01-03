@@ -1,4 +1,4 @@
-import formatNumberTruncate from './format-number-truncate';
+import formatNumberTruncate from '@/utils/format-number-truncate';
 
 describe('formatNumberTruncate', () => {
   beforeEach(() => {

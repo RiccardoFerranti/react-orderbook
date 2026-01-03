@@ -1,9 +1,8 @@
 import { renderHook } from '@testing-library/react';
 
-import { useOrderBook } from './use-order-book';
-import { EConnectStuses } from './types';
-import type { IOrderBookAdapter, IOrderBook } from '../components/orderbook/adapters/types';
-
+import type { IOrderBookAdapter, IOrderBook } from '@/components/orderbook/adapters/types';
+import { useOrderBook } from '@/client/use-order-book';
+import { EConnectStuses } from '@/client/types';
 import { EPairs } from '@/types';
 
 describe('useOrderBook', () => {

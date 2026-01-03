@@ -9,12 +9,12 @@ export default function Header() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="mx-auto px-4 py-4 flex justify-between items-center bg-background border-b border-border">
-      <div className="max-w-7xl mx-auto flex justify-between items-center w-full">
-        <Link href="/" className="text-3xl font-bold text-foreground">
+    <div className="bg-background border-border mx-auto flex items-center justify-between border-b px-4 py-4">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
+        <Link href="/" className="text-foreground text-3xl font-bold">
           Order Book
         </Link>
-        <button onClick={toggleTheme} className="px-4 py-2 bg-transparent text-foreground cursor-pointer">
+        <button onClick={toggleTheme} className="text-foreground cursor-pointer bg-transparent px-4 py-2">
           {theme === 'dark' ? <Sun /> : <Moon />}
         </button>
       </div>

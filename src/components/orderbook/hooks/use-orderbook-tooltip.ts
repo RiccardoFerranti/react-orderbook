@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { IHoverTooltipContent, TOrderType } from '../types';
-import { EOrderTypes } from '../types';
+import { EOrderTypes } from '@/components/orderbook/types';
+import type { IHoverTooltipContent, TOrderType } from '@/components/orderbook/types';
 
 /**
  * Custom hook for managing tooltip state and refs in the order book.

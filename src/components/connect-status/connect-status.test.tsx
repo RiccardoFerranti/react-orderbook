@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
 
-import { useIsMobile } from '../../hooks/use-is-mobile';
-import type { IConnectStatusProps } from './connect-status';
-import ConnectStatus from './connect-status';
-
+import ConnectStatus from '@/components/connect-status/connect-status';
+import type { IConnectStatusProps } from '@/components/connect-status/connect-status';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { EConnectStuses } from '@/client/types';
 
 jest.mock('../../hooks/use-is-mobile', () => ({

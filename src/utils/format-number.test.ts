@@ -1,4 +1,4 @@
-import { formatNumber } from './format-number';
+import { formatNumber } from '@/utils/format-number';
 
 describe('formatNumber', () => {
   it('should format number with default 2 decimals', () => {

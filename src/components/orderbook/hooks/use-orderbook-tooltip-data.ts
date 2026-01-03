@@ -1,8 +1,8 @@
 import type { RefObject } from 'react';
 import { useMemo } from 'react';
 
-import type { IHoverTooltipContent, ITooltipData } from '../types';
-import { EOrderTypes } from '../types';
+import { EOrderTypes } from '@/components/orderbook/types';
+import type { IHoverTooltipContent, ITooltipData } from '@/components/orderbook/types';
 
 interface IUseOrderBookTooltipData {
   cumulativeBidData: Map<number, any>;

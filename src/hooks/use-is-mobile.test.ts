@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 
-import { useIsMobile } from './use-is-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 describe('useIsMobile', () => {
   let matchMediaMock: jest.SpyInstance;

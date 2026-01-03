@@ -1,8 +1,7 @@
 import { renderHook } from '@testing-library/react';
 
-import { useOrderBookTrades } from './use-order-book-trade';
-import { EConnectStuses } from './types';
-
+import { EConnectStuses } from '@/client/types';
+import { useOrderBookTrades } from '@/client/use-order-book-trade';
 import type { IOrderBookAdapter, IOrderBookTradeRaw } from '@/components/orderbook/adapters/types';
 import { EPairs } from '@/types';
 import { EOrderTypes } from '@/components/orderbook/types';

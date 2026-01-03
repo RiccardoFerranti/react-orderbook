@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 
 import type { IOrderbookSkeletonRowProps } from './orderbook-skeleton-row';
 import OrderbookSkeletonRow from './orderbook-skeleton-row';
