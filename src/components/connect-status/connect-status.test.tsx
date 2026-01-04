@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import ConnectStatus from '@/components/connect-status/connect-status';
 import type { IConnectStatusProps } from '@/components/connect-status/connect-status';
@@ -15,31 +16,57 @@ const { connected, connecting, disconnected } = EConnectStuses;
 
 const statuses = [connected, connecting, disconnected];
 
-const renderConnectStatus = (props: IConnectStatusProps, isMobile: boolean = false) => {
-  mockedUseIsMobile.mockReturnValue(isMobile);
-  render(<ConnectStatus status={props.status} className={props.className} />);
+const statusLabelMap: Record<EConnectStuses, string> = {
+  [connected]: 'Live data',
+  [connecting]: 'Connecting...',
+  [disconnected]: 'Disconnected',
 };
 
-describe('Header', () => {
-  statuses.forEach((status) => {
-    it(`should render '${status}' status on desktop`, () => {
-      renderConnectStatus({ status }, false);
-      const connectStatus = screen.getByText(status);
-      expect(connectStatus).toBeInTheDocument();
+const renderConnectStatus = (props: IConnectStatusProps, isMobile = false) => {
+  mockedUseIsMobile.mockReturnValue(isMobile);
+  render(<ConnectStatus {...props} />);
+};
+
+describe('ConnectStatus', () => {
+  describe('Desktop behavior', () => {
+    statuses.forEach((status) => {
+      it(`should render '${statusLabelMap[status]}' inline on desktop`, () => {
+        renderConnectStatus({ status }, false);
+
+        expect(screen.getByText(statusLabelMap[status])).toBeInTheDocument();
+      });
     });
   });
 
-  statuses.forEach((status) => {
-    it(`should not render '${status}' status on mobile`, () => {
-      renderConnectStatus({ status }, true);
-      const connectStatus = screen.queryByText(status);
-      expect(connectStatus).not.toBeInTheDocument();
+  describe('Mobile behavior', () => {
+    statuses.forEach((status) => {
+      it(`should not render '${statusLabelMap[status]}' inline on mobile`, () => {
+        renderConnectStatus({ status }, true);
+
+        expect(screen.queryByText(statusLabelMap[status])).not.toBeInTheDocument();
+      });
+    });
+
+    it('should show `status label` inside popover when clicked', async () => {
+      const user = userEvent.setup();
+
+      renderConnectStatus({ status: connected }, true);
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      expect(await screen.findByText('Live data')).toBeInTheDocument();
     });
   });
 
-  it('should render the correct class name', () => {
-    renderConnectStatus({ status: connected, className: 'test-className' }, false);
-    const connectStatus = screen.getByText(connected);
-    expect(connectStatus).toHaveClass('test-className');
+  describe('Styling', () => {
+    it('should apply custom `className` to the badge', () => {
+      renderConnectStatus({ status: connected, className: 'test-className' }, false);
+
+      const label = screen.getByText('Live data');
+      const badge = label.closest('[class]');
+
+      expect(badge).toHaveClass('test-className');
+    });
   });
 });

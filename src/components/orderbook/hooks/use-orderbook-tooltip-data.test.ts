@@ -1,15 +1,15 @@
 import { renderHook } from '@testing-library/react';
 
 import useOrderBookTooltipData from '@/components/orderbook/hooks/use-orderbook-tooltip-data';
+import type { ITooltipData } from '@/components/orderbook/types';
 import { EOrderTypes } from '@/components/orderbook/types';
 
 describe('useOrderBookTooltipData', () => {
-  const bidData = new Map<number, any>([[100, { base: BigInt(10), quote: BigInt(1000), avgPrice: BigInt(100) }]]);
-  const askData = new Map<number, any>([[101, { base: BigInt(5), quote: BigInt(505), avgPrice: BigInt(101) }]]);
+  const bidData = new Map<number, ITooltipData>([[100, { base: BigInt(10), quote: BigInt(1000), avgPrice: BigInt(100) }]]);
+  const askData = new Map<number, ITooltipData>([[101, { base: BigInt(5), quote: BigInt(505), avgPrice: BigInt(101) }]]);
 
   it('should returns `zeroed values` when `hoverTooltipContent is null`', () => {
     const tooltipDataRef = { current: null };
-
     const { result } = renderHook(() =>
       useOrderBookTooltipData({
         cumulativeBidData: bidData,
@@ -18,11 +18,10 @@ describe('useOrderBookTooltipData', () => {
         tooltipDataRef,
       }),
     );
-
     expect(result.current).toEqual({
-      base: 0,
-      quote: 0,
-      avgPrice: 0,
+      base: BigInt(0),
+      quote: BigInt(0),
+      avgPrice: BigInt(0),
     });
   });
 

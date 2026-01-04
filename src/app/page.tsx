@@ -24,11 +24,7 @@ export default function Home() {
     status: ordersStatus,
   } = useOrderBook({ pair, adapter: binanceOrderBookAdapter });
 
-  const {
-    price,
-    orderType,
-    status: tradesStatus,
-  } = useOrderBookTrades({
+  const { price, orderType } = useOrderBookTrades({
     pair,
     adapter: binanceOrderBookAdapter,
   });
@@ -41,7 +37,7 @@ export default function Home() {
         <div className="flex w-full max-w-md flex-col gap-8">
           <div className="relative flex w-full flex-col items-center justify-between">
             <PairsDropdown value={pair} handleSetPair={handleSetPair} />
-            <ConnectStatus status={tradesStatus} className="absolute top-0 right-0" />
+            <ConnectStatus status={ordersStatus} className="absolute top-0 right-0" />
           </div>
           <OrderBook
             pair={pair}

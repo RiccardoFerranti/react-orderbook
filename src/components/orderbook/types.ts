@@ -5,9 +5,9 @@ export interface IHoverTooltipContent {
   orderType: TOrderType;
 }
 export interface ITooltipData {
-  base: number;
-  quote: number;
-  avgPrice: number;
+  base: bigint;
+  quote: bigint;
+  avgPrice: bigint;
 }
 
 export enum EOrderTypes {

@@ -22,12 +22,12 @@ export default function PairsDropdown(props: IOrderbookPairsDropdownProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild className="h-10 w-50 border-0">
+      <DropdownMenuTrigger asChild className="h-10 w-35 border-0">
         <Button variant="outline" className="text-foreground border-foreground border bg-transparent!">
           {value.toUpperCase()} <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-50">
+      <DropdownMenuContent className="w-35">
         <DropdownMenuRadioGroup value={value} onValueChange={handleSetPair}>
           {PAIRS_DROPDOWN_OPTIONS.map((dropdownOption) => (
             <DropdownMenuRadioItem key={dropdownOption} value={dropdownOption}>

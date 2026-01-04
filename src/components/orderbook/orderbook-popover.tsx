@@ -13,6 +13,7 @@ export interface IOrderbookPopoverProps {
 
 export default function OrderbookPopover(props: IOrderbookPopoverProps) {
   const { onCheckedChange, popoverFields } = props;
+
   return (
     <Popover>
       <PopoverTrigger asChild>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import type { ITooltipData } from '@/components/orderbook/types';
 import { EOrderTypes, type TOrderType } from '@/components/orderbook/types';
 import type { IOrder } from '@/components/orderbook/adapters/types';
 
@@ -36,18 +37,12 @@ import type { IOrder } from '@/components/orderbook/adapters/types';
  * @returns {Map<number, { base: bigint, quote: bigint, avgPrice: bigint }>} - Map from price to cumulative row data.
  */
 
-interface IUseOrderBookCumulativeTooltipDataReturn {
-  base: bigint;
-  quote: bigint;
-  avgPrice: bigint;
-}
-
 const useOrderBookCumulativeTooltipData = (
   orders: IOrder[],
   sizeDecimals: number,
   tickDecimals: number,
   orderType: TOrderType,
-): Map<number, IUseOrderBookCumulativeTooltipDataReturn> => {
+): Map<number, ITooltipData> => {
   const cumulativeData = useMemo(() => {
     const ordersMap: Map<number, IOrder> = new Map(orders.entries());
     const ordersMapCumulative = new Map();

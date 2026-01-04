@@ -38,8 +38,8 @@ const useExchangeInfo = (pair: string) => {
       const symbol = data.symbols?.[0];
       if (!symbol) throw new Error('Symbol not found');
 
-      const priceFilter = symbol.filters.find((f: any) => f.filterType === 'PRICE_FILTER');
-      const lotSizeFilter = symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE');
+      const priceFilter = symbol.filters.find((f: Record<string, any>) => f.filterType === 'PRICE_FILTER');
+      const lotSizeFilter = symbol.filters.find((f: Record<string, any>) => f.filterType === 'LOT_SIZE');
 
       return {
         tickSize: priceFilter?.tickSize,
