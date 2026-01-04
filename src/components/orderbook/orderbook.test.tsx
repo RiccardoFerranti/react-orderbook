@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 import OrderBook from './orderbook';
 import { useIsMobile } from '../../hooks/use-is-mobile';
+import { MAX_ROWS_DEFAULT_VISIBLE } from './consts';
 
 import { EOrderTypes } from '@/components/orderbook/types';
 import type { IOrderBook, IOrderBookAdapterCapabilities } from '@/components/orderbook/adapters/types';
@@ -63,19 +64,14 @@ describe('OrderBook', () => {
     };
   });
 
-  it('should render `Order Book` title', () => {
-    render(<OrderBook {...mockedProps} />);
-
-    expect(screen.getByText('Order Book')).toBeInTheDocument();
-  });
-
-  it('should render `skeleton rows` when `isInitialOrdersLoading` is `true`', () => {
+  it('should render `skeleton rows` when `isInitialOrdersLoading` is `true`', async () => {
     mockedProps.isInitialOrdersLoading = true;
     render(<OrderBook {...mockedProps} />);
 
-    // Skeleton rows are rendered but don't have testIds, so we check for the structure
-    const container = screen.getByText('Order Book').closest('.relative');
-    expect(container).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryAllByTestId(/bid-skeleton-/).length).toBe(MAX_ROWS_DEFAULT_VISIBLE);
+      expect(screen.queryAllByTestId(/ask-skeleton-/).length).toBe(MAX_ROWS_DEFAULT_VISIBLE);
+    });
   });
 
   it('should render `skeleton rows` when `status` is `disconnected` and no data', () => {
@@ -84,8 +80,8 @@ describe('OrderBook', () => {
     mockedProps.asks = [];
     render(<OrderBook {...mockedProps} />);
 
-    // Should render skeleton structure
-    expect(screen.getByText('Order Book')).toBeInTheDocument();
+    expect(screen.queryByText(/50,000/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/50,001/)).not.toBeInTheDocument();
   });
 
   it('should render `real rows` when `isInitialOrdersLoading` is `false` and data exists', () => {
@@ -151,8 +147,11 @@ describe('OrderBook', () => {
     mockedProps.status = EConnectStuses.connected;
     render(<OrderBook {...mockedProps} />);
 
-    // Should still render the component structure
-    expect(screen.getByText('Order Book')).toBeInTheDocument();
+    expect(screen.getByTestId('asks-container')).toBeInTheDocument();
+    expect(screen.getByTestId('bids-container')).toBeInTheDocument();
+
+    expect(screen.queryByTestId('asks-container')).toBeEmptyDOMElement();
+    expect(screen.queryByTestId('bids-container')).toBeEmptyDOMElement();
   });
 
   it('should render with `ethusdc` pair and correct labels', () => {

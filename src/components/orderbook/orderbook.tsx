@@ -30,7 +30,7 @@ import OrderbookSkeletonRow from '@/components/orderbook/orderbook-skeleton-row'
 import OrderBookRow from '@/components/orderbook/orderbook-row';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card';
 import DefaultBuySellIcon from '@/assets/buy-sell-icon';
 import BuyIcon from '@/assets/buy-icon';
 import SellIcon from '@/assets/sell-icon';
@@ -243,6 +243,7 @@ export default function OrderBook(props: IOrderBookProps) {
             {(view.default || view.ask) && (
               <div className={cn('space-y-1npx -mt-2')}>
                 <div
+                  data-testid="asks-container"
                   ref={askContainerRef}
                   className="relative overflow-hidden"
                   style={{
@@ -253,7 +254,7 @@ export default function OrderBook(props: IOrderBookProps) {
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
                   {(isInitialOrdersLoading || (status === EConnectStuses.disconnected && !asksPriceStepOrdered.length)) &&
                     Array.from({ length: visibleRows }).map((_, index) => (
-                      <OrderbookSkeletonRow key={`ask-skeleton-${index}`} index={index} />
+                      <OrderbookSkeletonRow key={`ask-skeleton-${index}`} index={index} orderType={EOrderTypes.ask} />
                     ))}
 
                   {/* REAL ROWS */}
@@ -308,6 +309,7 @@ export default function OrderBook(props: IOrderBookProps) {
             {(view.default || view.bid) && (
               <div className={cn('space-y-1npx orderbook-radix-table-full -mb-2')}>
                 <div
+                  data-testid="bids-container"
                   ref={bidContainerRef}
                   className="relative overflow-hidden"
                   style={{
@@ -318,7 +320,7 @@ export default function OrderBook(props: IOrderBookProps) {
                   {/* SKELETON ROWS — ONLY ON FIRST LOAD */}
                   {(isInitialOrdersLoading || (status === EConnectStuses.disconnected && !bidsPriceStepOrdered.length)) &&
                     Array.from({ length: visibleRows }).map((_, index) => (
-                      <OrderbookSkeletonRow key={`bid-skeleton-${index}`} index={index} />
+                      <OrderbookSkeletonRow key={`bid-skeleton-${index}`} index={index} orderType={EOrderTypes.bid} />
                     ))}
 
                   {/* REAL ROWS */}
