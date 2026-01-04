@@ -212,7 +212,7 @@ export default function OrderBook(props: IOrderBookProps) {
       <Card className="border-border/20 w-full gap-2 bg-(--card)/40">
         <CardHeader className="flex flex-col gap-4">
           <div className="flex w-full items-center justify-between">
-            <CardTitle className="text-foreground">Order Book</CardTitle>
+            <div />
             <OrderbookPopover popoverFields={popoverFields} onCheckedChange={handleSetPopoverFields} />
           </div>
           <Separator className="bg-border/80" />
