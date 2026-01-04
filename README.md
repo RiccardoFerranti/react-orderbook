@@ -2,6 +2,13 @@
 
 ![Use case](https://img.shields.io/badge/Use%20Case-Demo%20Dashboard-blue)
 
+---
+
+## Live Demo
+
+Try the Order Book here:  
+[https://react-orderbook-taupe.vercel.app/](https://react-orderbook-taupe.vercel.app/)
+
 ## Overview
 
 Real-time order book and trade stream built with Next.js and Binance WebSockets.
