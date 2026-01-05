@@ -56,11 +56,11 @@ NEXT_PUBLIC_BINANCE_UPDATE_MS=100
 
 <img src="doc/screenshots/orderbook-loading.png" alt="Order book loading state" width="600" />
 <img src="doc/screenshots/orderbook-connected.png" alt="Order book connected state"  width="600" />
-<img src="doc/screenshots/orderbook-change-pair.gif" width="600" />
-<img src="doc/screenshots/orderbook-expand.gif" width="600" />
-<img src="doc/screenshots/orderbook-step-price.gif" width="600" />
-<img src="doc/screenshots/orderbook-tooltip.gif" width="600" />
-<img src="doc/screenshots/orderbook-rounding.gif" width="600" />
+<img src="doc/screenshots/orderbook-change-pair.gif" alt="Order book updating when the trading pair is changed" width="600" />
+<img src="doc/screenshots/orderbook-expand.gif" alt="Order book expanding to show additional price levels" width="600" />
+<img src="doc/screenshots/orderbook-step-price.gif" alt="Changing the order book price step" width="600" />
+<img src="doc/screenshots/orderbook-tooltip.gif" alt="Tooltip displaying order details when hovering over the order book" width="600" />
+<img src="doc/screenshots/orderbook-rounding.gif" alt="Order book values rounding as precision settings change" width="600" />
 
 ## Configuration
 
