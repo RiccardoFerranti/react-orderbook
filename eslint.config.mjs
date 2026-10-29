@@ -23,7 +23,7 @@ const eslintConfig = [
   ...prettierConfig,
   eslintPluginPrettierRecommended,
   {
-    ignores: ['public/**', 'node_modules/**', '.next/**', 'out/**', 'build/**'],
+    ignores: ['public/**', 'node_modules/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
   },
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
