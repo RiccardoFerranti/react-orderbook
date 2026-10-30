@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { it } from 'node:test';
 
 import {
   BOARD_ID,
@@ -21,14 +21,14 @@ function ok(data) {
   return { ok: true, json: async () => data };
 }
 
-test('finds a Trello card only in a dedicated link line', () => {
+it('should find a Trello card only in a dedicated link line', () => {
   assert.equal(findTrelloCard(body), 'lLHu71nJ');
   assert.equal(findTrelloCard('See https://trello.com/c/lLHu71nJ in the notes.'), null);
   assert.equal(findTrelloCard('Trello: https://trello.com/c/not-a-short-link'), null);
   assert.throws(() => findTrelloCard('Trello: https://trello.com/c/lLHu71nJ\nTrello: https://trello.com/c/AbCd1234'));
 });
 
-test('skips a PR without a Trello card', async () => {
+it('should skip a PR without a Trello card', async () => {
   const result = await moveTrelloCard({
     body: '## Summary\n\n- Update CI.',
     fetcher: () => assert.fail('No API request expected'),
@@ -36,7 +36,7 @@ test('skips a PR without a Trello card', async () => {
   assert.equal(result, 'no-card');
 });
 
-test('moves a card on the expected board to Done', async () => {
+it('should move a card on the expected board to Done', async () => {
   const calls = [];
   const result = await moveTrelloCard({
     body,
@@ -69,7 +69,7 @@ test('moves a card on the expected board to Done', async () => {
   assert.deepEqual(JSON.parse(calls[1].options.body), { idList: DONE_LIST_ID });
 });
 
-test('does not include Trello credentials in request errors', async () => {
+it('should keep Trello credentials out of request errors', async () => {
   await assert.rejects(
     moveTrelloCard({
       body,
@@ -101,7 +101,7 @@ test('does not include Trello credentials in request errors', async () => {
   );
 });
 
-test('does not move a card from another board', async () => {
+it('should not move a card from another board', async () => {
   let requests = 0;
   await assert.rejects(
     moveTrelloCard({
@@ -118,7 +118,7 @@ test('does not move a card from another board', async () => {
   assert.equal(requests, 1);
 });
 
-test('does not update a card already in Done', async () => {
+it('should not update a card already in Done', async () => {
   let requests = 0;
   const result = await moveTrelloCard({
     body,
@@ -133,7 +133,7 @@ test('does not update a card already in Done', async () => {
   assert.equal(requests, 1);
 });
 
-test('CI gating ignores failed, skipped, and pull request runs', async () => {
+it('should ignore failed, skipped, and pull request CI runs', async () => {
   for (const workflowRun of [
     { conclusion: 'failure' },
     { conclusion: 'skipped' },
@@ -148,7 +148,7 @@ test('CI gating ignores failed, skipped, and pull request runs', async () => {
   }
 });
 
-test('finds only a PR merged into main at the successful CI commit', async () => {
+it('should find only a PR merged into main at the successful CI commit', async () => {
   const calls = [];
   const result = await findMergedPullRequestBody({
     event,
@@ -168,7 +168,7 @@ test('finds only a PR merged into main at the successful CI commit', async () =>
   assert.equal(calls[0].options.headers.Authorization, 'Bearer github-example-token');
 });
 
-test('a direct push or PR without a Trello link does not call Trello', async () => {
+it('should not call Trello for a direct push or PR without a Trello link', async () => {
   for (const pullRequests of [
     [],
     [{ body: '## Summary', merged_at: '2026-10-30T00:00:00Z', base: { ref: 'main' }, merge_commit_sha: sha }],
@@ -187,7 +187,7 @@ test('a direct push or PR without a Trello link does not call Trello', async () 
   }
 });
 
-test('a successful main CI run moves the linked merged PR card', async () => {
+it('should move the linked merged PR card after a successful main CI run', async () => {
   const calls = [];
   const result = await moveCardAfterCi({
     event,
