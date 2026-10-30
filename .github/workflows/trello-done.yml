@@ -1,0 +1,31 @@
+name: Move Trello card to Done
+
+# Requires repository secrets TRELLO_API_KEY and TRELLO_API_TOKEN.
+# PR description line: Trello: https://trello.com/c/<shortLink>
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  move-card:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Move linked Trello card
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_API_TOKEN: ${{ secrets.TRELLO_API_TOKEN }}
+        run: node .github/scripts/move-trello-card.mjs
