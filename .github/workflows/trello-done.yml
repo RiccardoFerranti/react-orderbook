@@ -4,28 +4,30 @@ name: Move Trello card to Done
 # PR description line: Trello: https://trello.com/c/<shortLink>
 
 on:
-  pull_request:
-    types: [closed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   move-card:
-    if: github.event.pull_request.merged == true
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Move linked Trello card
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
+          GITHUB_API_TOKEN: ${{ github.token }}
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
           TRELLO_API_TOKEN: ${{ secrets.TRELLO_API_TOKEN }}
         run: node .github/scripts/move-trello-card.mjs
