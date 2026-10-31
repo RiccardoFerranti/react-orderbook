@@ -1,7 +1,7 @@
 name: Move Trello card to Done
 
 # Requires repository secrets TRELLO_API_KEY and TRELLO_API_TOKEN.
-# PR description line: Trello: https://trello.com/c/<shortLink>
+# PR description: add one Trello: https://trello.com/c/<shortLink> line per card.
 
 on:
   workflow_run:

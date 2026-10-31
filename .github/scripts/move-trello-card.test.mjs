@@ -5,9 +5,9 @@ import {
   BOARD_ID,
   DONE_LIST_ID,
   findMergedPullRequestBody,
-  findTrelloCard,
+  findTrelloCards,
   moveCardAfterCi,
-  moveTrelloCard,
+  moveTrelloCards,
 } from './move-trello-card.mjs';
 
 const body = '## Summary\n\n- Update the order book.\n\nTrello: https://trello.com/c/lLHu71nJ/13-order-book';
@@ -21,28 +21,49 @@ function ok(data) {
   return { ok: true, json: async () => data };
 }
 
-it('should find a Trello card only in a dedicated link line', () => {
-  assert.equal(findTrelloCard(body), 'lLHu71nJ');
-  assert.equal(findTrelloCard('See https://trello.com/c/lLHu71nJ in the notes.'), null);
-  assert.equal(findTrelloCard('Trello: https://trello.com/c/not-a-short-link'), null);
-  assert.throws(() => findTrelloCard('Trello: https://trello.com/c/lLHu71nJ\nTrello: https://trello.com/c/AbCd1234'));
+it('should find distinct Trello cards only in dedicated link lines', () => {
+  assert.deepEqual(findTrelloCards(body), ['lLHu71nJ']);
+  assert.deepEqual(findTrelloCards('See https://trello.com/c/lLHu71nJ in the notes.'), []);
+  assert.deepEqual(findTrelloCards('Trello: https://trello.com/c/not-a-short-link'), []);
+  assert.deepEqual(
+    findTrelloCards(
+      'Trello: https://trello.com/c/lLHu71nJ\nTrello: https://trello.com/c/lLHu71nJ\nTrello: https://trello.com/c/AbCd1234',
+    ),
+    ['lLHu71nJ', 'AbCd1234'],
+  );
 });
 
 it('should skip a PR without a Trello card', async () => {
-  const result = await moveTrelloCard({
+  const result = await moveTrelloCards({
     body: '## Summary\n\n- Update CI.',
-    fetcher: () => assert.fail('No API request expected'),
+    fetch: () => assert.fail('No API request expected'),
   });
   assert.equal(result, 'no-card');
 });
 
+it('should reject missing Trello credentials before requesting any card', async () => {
+  let requests = 0;
+  await assert.rejects(
+    moveTrelloCards({
+      body: `${body}\nTrello: https://trello.com/c/AbCd1234/another-card`,
+      apiKey: 'example-key',
+      fetch: () => {
+        requests += 1;
+        assert.fail('No API request expected');
+      },
+    }),
+    /Configure TRELLO_API_KEY and TRELLO_API_TOKEN/,
+  );
+  assert.equal(requests, 0);
+});
+
 it('should move a card on the expected board to Done', async () => {
   const calls = [];
-  const result = await moveTrelloCard({
+  const result = await moveTrelloCards({
     body,
     apiKey: 'example-key',
     apiToken: 'example-token',
-    fetcher: async (url, options) => {
+    fetch: async (url, options) => {
       calls.push({ url, options });
       return calls.length === 1
         ? ok({ id: 'card-id', idBoard: BOARD_ID, idList: 'other-list' })
@@ -71,31 +92,31 @@ it('should move a card on the expected board to Done', async () => {
 
 it('should keep Trello credentials out of request errors', async () => {
   await assert.rejects(
-    moveTrelloCard({
+    moveTrelloCards({
       body,
       apiKey: 'example-key',
       apiToken: 'example-token',
-      fetcher: () => {
+      fetch: () => {
         throw new Error('example-key example-token');
       },
     }),
     (error) => error.message === 'Trello request failed.',
   );
   await assert.rejects(
-    moveTrelloCard({
+    moveTrelloCards({
       body,
       apiKey: 'example-key',
       apiToken: 'example-token',
-      fetcher: async () => ({ ok: false, status: 401 }),
+      fetch: async () => ({ ok: false, status: 401 }),
     }),
     (error) => error.message === 'Trello request failed with HTTP 401.',
   );
   await assert.rejects(
-    moveTrelloCard({
+    moveTrelloCards({
       body,
       apiKey: 'example-key',
       apiToken: 'invalid\ntoken',
-      fetcher: () => assert.fail('No API request expected'),
+      fetch: () => assert.fail('No API request expected'),
     }),
     (error) => error.message === 'Invalid Trello credentials.',
   );
@@ -104,11 +125,11 @@ it('should keep Trello credentials out of request errors', async () => {
 it('should not move a card from another board', async () => {
   let requests = 0;
   await assert.rejects(
-    moveTrelloCard({
+    moveTrelloCards({
       body,
       apiKey: 'example-key',
       apiToken: 'example-token',
-      fetcher: async () => {
+      fetch: async () => {
         requests += 1;
         return ok({ id: 'card-id', idBoard: 'another-board', idList: 'other-list' });
       },
@@ -120,17 +141,68 @@ it('should not move a card from another board', async () => {
 
 it('should not update a card already in Done', async () => {
   let requests = 0;
-  const result = await moveTrelloCard({
+  const result = await moveTrelloCards({
     body,
     apiKey: 'example-key',
     apiToken: 'example-token',
-    fetcher: async () => {
+    fetch: async () => {
       requests += 1;
       return ok({ id: 'card-id', idBoard: BOARD_ID, idList: DONE_LIST_ID });
     },
   });
   assert.equal(result, 'already-done');
   assert.equal(requests, 1);
+});
+
+it('should move each distinct card linked in a PR', async () => {
+  const calls = [];
+  const result = await moveTrelloCards({
+    body: `${body}\nTrello: https://trello.com/c/lLHu71nJ/duplicate\nTrello: https://trello.com/c/AbCd1234/another-card`,
+    apiKey: 'example-key',
+    apiToken: 'example-token',
+    fetch: async (url, options) => {
+      calls.push({ shortLink: url.pathname.split('/').at(-1), method: options.method ?? 'GET' });
+      return options.method === 'PUT'
+        ? ok({ idList: DONE_LIST_ID })
+        : ok({ id: url.pathname.split('/').at(-1), idBoard: BOARD_ID, idList: 'other-list' });
+    },
+  });
+
+  assert.equal(result, '2 moved, 0 already done');
+  assert.deepEqual(
+    calls.filter((call) => call.method === 'GET').map((call) => call.shortLink),
+    ['lLHu71nJ', 'AbCd1234'],
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.method === 'PUT').map((call) => call.shortLink),
+    ['lLHu71nJ', 'AbCd1234'],
+  );
+});
+
+it('should attempt the other card regardless of which card fails', async () => {
+  const twoCardBody = `${body}\nTrello: https://trello.com/c/AbCd1234/another-card`;
+  for (const failedShortLink of ['lLHu71nJ', 'AbCd1234']) {
+    const calls = [];
+    await assert.rejects(
+      moveTrelloCards({
+        body: twoCardBody,
+        apiKey: 'example-key',
+        apiToken: 'example-token',
+        fetch: async (url, options) => {
+          const shortLink = url.pathname.split('/').at(-1);
+          calls.push({ shortLink, method: options.method ?? 'GET' });
+          if (shortLink === failedShortLink) return { ok: false, status: 500 };
+          return options.method === 'PUT'
+            ? ok({ idList: DONE_LIST_ID })
+            : ok({ id: shortLink, idBoard: BOARD_ID, idList: 'other-list' });
+        },
+      }),
+      (error) =>
+        error.message.includes(`1 moved, 0 already done, 1 failed. ${failedShortLink}: Trello request failed with HTTP 500.`),
+    );
+    assert.ok(calls.some((call) => call.shortLink === failedShortLink && call.method === 'GET'));
+    assert.ok(calls.some((call) => call.shortLink !== failedShortLink && call.method === 'PUT'));
+  }
 });
 
 it('should ignore failed, skipped, and pull request CI runs', async () => {
@@ -142,7 +214,7 @@ it('should ignore failed, skipped, and pull request CI runs', async () => {
   ]) {
     const result = await moveCardAfterCi({
       event: { ...event, workflow_run: { ...event.workflow_run, ...workflowRun } },
-      fetcher: () => assert.fail('No API request expected'),
+      fetch: () => assert.fail('No API request expected'),
     });
     assert.equal(result, 'no-merged-pr');
   }
@@ -153,7 +225,7 @@ it('should find only a PR merged into main at the successful CI commit', async (
   const result = await findMergedPullRequestBody({
     event,
     githubToken: 'github-example-token',
-    fetcher: async (url, options) => {
+    fetch: async (url, options) => {
       calls.push({ url, options });
       return ok([
         { body: 'wrong branch', merged_at: '2026-10-30T00:00:00Z', base: { ref: 'develop' }, merge_commit_sha: sha },
@@ -177,7 +249,7 @@ it('should not call Trello for a direct push or PR without a Trello link', async
     const result = await moveCardAfterCi({
       event,
       githubToken: 'github-example-token',
-      fetcher: async () => {
+      fetch: async () => {
         requests += 1;
         return ok(pullRequests);
       },
@@ -194,7 +266,7 @@ it('should move the linked merged PR card after a successful main CI run', async
     githubToken: 'github-example-token',
     apiKey: 'example-key',
     apiToken: 'example-token',
-    fetcher: async (url, options) => {
+    fetch: async (url, options) => {
       calls.push({ url, options });
       if (calls.length === 1)
         return ok([{ body, merged_at: '2026-10-30T00:00:00Z', base: { ref: 'main' }, merge_commit_sha: sha }]);
