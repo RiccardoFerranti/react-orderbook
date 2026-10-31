@@ -46,17 +46,40 @@ export function useOrderBookTrades({
 
   // References to manage WS disconnect function, retry timeout, and health check interval
   const disconnectRef = useRef<TOrderBookUnsubscribe | null>(null);
-  const retryCountRef = useRef(0); // Tracks retries for exponential backoff
+  const retryCountRef = useRef(0); // Tracks retries for incremental delays
   const retryTimeoutRef = useRef<number | null>(null);
+  // Keep the existing health check interval ID so offline/hidden can cancel it immediately.
+  const healthIntervalRef = useRef<number | null>(null);
+  // Invalidates callbacks from sockets that were closed or replaced.
+  const connectionIdRef = useRef(0);
+  // A scheduled retry must use the latest pair and adapter after a render.
+  const connectRef = useRef<() => void>(() => {});
+
+  const stopConnection = useCallback(() => {
+    connectionIdRef.current += 1;
+
+    if (retryTimeoutRef.current !== null) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    if (healthIntervalRef.current !== null) {
+      clearInterval(healthIntervalRef.current);
+      healthIntervalRef.current = null;
+    }
+
+    const disconnect = disconnectRef.current;
+    disconnectRef.current = null;
+    disconnect?.();
+  }, []);
 
   /**
    * scheduleRetry
    * Called when the WebSocket fails or closes unexpectedly.
-   * Implements limited retries with incremental delay (exponential backoff).
+   * Implements limited retries with an incremental delay.
    * Stops retrying after maxRetries and sets status to 'disconnected'.
    */
   const scheduleRetry = useCallback(() => {
-    if (document.hidden) return; // Do not retry if tab is hidden
+    if (document.hidden || !navigator.onLine || retryTimeoutRef.current !== null) return;
 
     if (retryCountRef.current >= maxRetries) {
       setStatus(EConnectStuses.disconnected); // Stop retrying after max attempts
@@ -68,7 +91,10 @@ export function useOrderBookTrades({
     retryCountRef.current += 1;
     setStatus(EConnectStuses.connecting);
 
-    retryTimeoutRef.current = window.setTimeout(() => connect(), delay);
+    retryTimeoutRef.current = window.setTimeout(() => {
+      retryTimeoutRef.current = null;
+      connectRef.current();
+    }, delay);
   }, [baseRetryDelay, maxRetries]);
 
   /**
@@ -78,48 +104,71 @@ export function useOrderBookTrades({
    * Resets retry count and updates status on successful trade messages.
    */
   const connect = useCallback(() => {
-    if (!adapter.connectTrades || document.hidden) return;
-
-    // Cancel previous retry to avoid overlap
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
+    if (!navigator.onLine) {
+      stopConnection();
+      setStatus(EConnectStuses.disconnected);
+      return;
+    }
+    if (!adapter.connectTrades || document.hidden) {
+      setStatus(EConnectStuses.disconnected);
+      return;
     }
 
-    // Disconnect previous WS if exists
-    disconnectRef.current?.();
-    disconnectRef.current = null;
+    stopConnection();
+    const connectionId = connectionIdRef.current;
 
     setStatus(EConnectStuses.connecting);
 
-    disconnectRef.current = adapter.connectTrades(
+    const disconnect = adapter.connectTrades(
       pair,
       (trade) => {
+        if (connectionIdRef.current !== connectionId || !navigator.onLine || document.hidden) return;
+
         setLastTrade(trade);
         setStatus(EConnectStuses.connected);
         retryCountRef.current = 0; // reset retries
       },
-      scheduleRetry, // Adapter will call this on WS error/close
+      () => {
+        if (connectionIdRef.current !== connectionId) return;
+        stopConnection();
+        scheduleRetry();
+      },
     );
-  }, [adapter, pair, scheduleRetry]);
+    if (connectionIdRef.current === connectionId) disconnectRef.current = disconnect;
+    else disconnect();
+  }, [adapter, pair, scheduleRetry, stopConnection]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   /**
    * Initial connection when hook mounts
    */
   useEffect(() => {
     connect();
-    return () => {
-      retryTimeoutRef.current && clearTimeout(retryTimeoutRef.current);
-      disconnectRef.current?.();
-    };
-  }, [connect]);
+    return () => stopConnection();
+  }, [connect, stopConnection]);
 
   /**
-   * Reconnect when the network comes back online
+   * Stop immediately when the browser goes offline.
+   */
+  useEffect(() => {
+    const handleOffline = () => {
+      stopConnection();
+      setStatus(EConnectStuses.disconnected);
+    };
+
+    window.addEventListener('offline', handleOffline);
+    return () => window.removeEventListener('offline', handleOffline);
+  }, [stopConnection]);
+
+  /**
+   * Reconnect promptly when the browser comes back online.
    */
   useEffect(() => {
     const handleOnline = () => {
-      if (status !== EConnectStuses.connected) {
+      if (disconnectRef.current === null) {
         retryCountRef.current = 0;
         connect();
       }
@@ -127,7 +176,7 @@ export function useOrderBookTrades({
 
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
-  }, [connect, status]);
+  }, [connect]);
 
   /**
    * Handle tab visibility changes:
@@ -137,20 +186,17 @@ export function useOrderBookTrades({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        disconnectRef.current?.();
-        disconnectRef.current = null;
+        stopConnection();
         setStatus(EConnectStuses.disconnected);
-      } else {
-        if (status !== EConnectStuses.connected) {
-          retryCountRef.current = 0;
-          connect();
-        }
+      } else if (disconnectRef.current === null) {
+        retryCountRef.current = 0;
+        connect();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [connect, status]);
+  }, [connect, stopConnection]);
 
   /**
    * Periodic health check
@@ -158,16 +204,21 @@ export function useOrderBookTrades({
    * Tries to reconnect every healthRetryDelay ms until successful.
    */
   useEffect(() => {
-    if (status !== EConnectStuses.disconnected) return;
+    if (status !== EConnectStuses.disconnected || !navigator.onLine || document.hidden) return;
 
     retryCountRef.current = 0;
 
-    const id = window.setInterval(() => {
+    healthIntervalRef.current = window.setInterval(() => {
       connect();
     }, healthRetryDelay); // health probe interval
 
-    return () => clearInterval(id);
-  }, [status, connect]);
+    return () => {
+      if (healthIntervalRef.current !== null) {
+        clearInterval(healthIntervalRef.current);
+        healthIntervalRef.current = null;
+      }
+    };
+  }, [status, connect, healthRetryDelay]);
 
   return {
     price: lastTrade?.price,
