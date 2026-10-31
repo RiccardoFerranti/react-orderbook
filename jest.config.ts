@@ -12,7 +12,7 @@ const config: Config = {
   testEnvironment: 'jsdom',
   // Add more setup options before each test is run
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  // Use polling for watch mode to avoid EMFILE errors on macOS
+  // Use Jest's native file watcher instead of Watchman.
   watchman: false,
   // Ignore unnecessary directories when watching
   watchPathIgnorePatterns: [

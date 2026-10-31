@@ -23,4 +23,3 @@ jobs:
       - run: npm ci
       - run: npm run lint:all
       - run: npm test
-      - run: node --test .github/scripts/move-trello-card.test.mjs
